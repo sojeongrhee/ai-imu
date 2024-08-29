@@ -1,8 +1,7 @@
 import os
 import shutil
 import numpy as np
-import pandas as pd  # Pandas 추가
-from collections import namedtuple
+import pandas as pd  
 import glob
 import time
 import datetime
@@ -11,7 +10,7 @@ import torch
 import matplotlib.pyplot as plt
 from termcolor import cprint
 from navpy import lla2ned
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from dataset import BaseDataset
 from utils_torch_filter import TORCHIEKF
 from utils_numpy_filter import NUMPYIEKF as IEKF
@@ -22,8 +21,9 @@ from utils_plot import results_filter
 
 def launch(args):
     if args.read_data:
-        args.dataset_class.read_data(args)  # 'args' 인자를 전달하도록 수정
+        args.dataset_class.read_data(args)
     dataset = args.dataset_class(args)
+    dataset.post_init_processing()
 
     if args.train_filter:
         train_filter(args, dataset)
@@ -57,7 +57,7 @@ class USVParameters(IEKF.Parameters):  # 클래스 이름 변경
     def __init__(self, **kwargs):
         super(USVParameters, self).__init__(**kwargs)  # 클래스 이름에 맞게 수정
         self.set_param_attr()
-        
+
     def set_param_attr(self):
         attr_list = [a for a in dir(USVParameters) if  # 클래스 이름에 맞게 수정
                      not a.startswith('__') and not callable(getattr(USVParameters, a))]  # 클래스 이름에 맞게 수정
@@ -67,38 +67,210 @@ class USVParameters(IEKF.Parameters):  # 클래스 이름 변경
 
 class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
     def __init__(self, args):
-        super(USVDataset, self).__init__(args)
-        self.pickle_path = os.path.join(args.path_data_base, 'merged_output.p')
-        self.datasets_train_filter["merged_output"] = [0, 15000]
+        # super(USVDataset, self).__init__(args)
+        self.path_data_save = args.path_data_save
+        self.path_results = args.path_results
+        self.path_temp = args.path_temp
+        self.datasets_test = args.test_sequences
+        self.datasets_validation = args.cross_validation_sequences
+
+        self.datasets = []
+        self.datasets_train = []
+        self.datasets_validatation_filter = OrderedDict()
+        self.datasets_train_filter = OrderedDict()
+
+        self.sigma_gyro = 1.e-4
+        self.sigma_acc = 1.e-4
+        self.sigma_b_gyro = 1.e-5
+        self.sigma_b_acc = 1.e-4
+
+        self.num_data = 0
+        self.normalize_factors = None
+        self.get_datasets()  
+
+        # self.pickle_path = os.path.join(args.path_data_base, 'merged_output.p')
+        self.datasets_train_filter["merged_output_2"] = [0, 15000]
+        #########################################
+        # # Load the pickle file
+        # with open('../0828/merged_output.p', 'rb') as f:
+        #     loaded_df = pickle.load(f)
+        # print(loaded_df.head())
+        ############################################
+
+    def post_init_processing(self):
+        """ 데이터를 로드한 후, normalize factors를 설정 """
+        self.set_normalize_factors()
+
+    @staticmethod
+    def load_oxts_packets_and_poses(data):
+        """Converts data from merged_output DataFrame to the required format."""
+        poses = []
+        packets = []
+        for _, row in data.iterrows():
+            packet = namedtuple('OxtsPacket', 'lat, lon, alt, roll, pitch, yaw, vn, ve, vu, ax, ay, az, wx, wy, wz')
+            pose = np.eye(4)  # 4x4 identity matrix as placeholder
+            Rot = USVDataset.rotz(row['yaw']).dot(USVDataset.roty(row['pitch'])).dot(USVDataset.rotx(row['roll']))
+            pose[:3, :3] = Rot  # Convert roll, pitch, yaw to rotation matrix
+            pose[:3, 3] = lla2ned(row['lat'], row['lon'], row['alt'], row['lat'], row['lon'], row['alt'])
+            packets.append(packet(row['lat'], row['lon'], row['alt'], row['roll'], row['pitch'], row['yaw'],
+                                  row['vn'], row['ve'], row['vu'], row['ax'], row['ay'], row['az'],
+                                  row['wx'], row['wy'], row['wz']))
+            poses.append(pose)
+        return list(zip(packets, poses))
 
     @staticmethod
     def read_data(args):
+        """
+        Read the data from the USV dataset pickle file and prepare it
+        for training, similar to the KITTI dataset read_data method.
+
+        :param args: Arguments object containing dataset paths and other configs
+        """
+        t_tot = 0
         # Load data from merged_output.p
         with open(args.path_data_base + '/merged_output.p', 'rb') as f:
             data = pickle.load(f)
 
-        # Store the data in the dataset object
-        args.dataset_instance = USVDataset(args)
-        args.dataset_instance.timestamps = pd.to_datetime(data['%time'])
-        args.dataset_instance.lat_oxts = data['lat'].to_numpy()
-        args.dataset_instance.lon_oxts = data['lon'].to_numpy()
-        args.dataset_instance.alt_oxts = data['alt'].to_numpy()
-        args.dataset_instance.roll_oxts = data['roll'].to_numpy()
-        args.dataset_instance.pitch_oxts = data['pitch'].to_numpy()
-        args.dataset_instance.yaw_oxts = data['yaw'].to_numpy()
-        args.dataset_instance.vx_oxts = data['vn'].to_numpy()  # North velocity
-        args.dataset_instance.vy_oxts = data['ve'].to_numpy()  # East velocity
-        args.dataset_instance.vz_oxts = data['vu'].to_numpy()  # Up velocity
-        args.dataset_instance.ax_oxts = data['ax'].to_numpy()  # X acceleration
-        args.dataset_instance.ay_oxts = data['ay'].to_numpy()  # Y acceleration
-        args.dataset_instance.az_oxts = data['az'].to_numpy()  # Z acceleration
-        args.dataset_instance.wx_oxts = data['wx'].to_numpy()  # X angular velocity
-        args.dataset_instance.wy_oxts = data['wy'].to_numpy()  # Y angular velocity
-        args.dataset_instance.wz_oxts = data['wz'].to_numpy()  # Z angular velocity
-        # # Save datasets to the dataset_instance
-        # args.dataset_instance.datasets_train_filter = OrderedDict()
-        for i, time_stamp in enumerate(args.dataset_instance.timestamps):
-            args.dataset_instance.datasets_train_filter[time_stamp] = i
+        oxts = USVDataset.load_oxts_packets_and_poses(data)
+
+        # Initialize arrays for storing processed data
+        num_samples = len(oxts)
+        t = np.zeros(num_samples)
+        acc = np.zeros((num_samples, 3))
+        gyro = np.zeros((num_samples, 3))
+        p_gt = np.zeros((num_samples, 3))
+        v_gt = np.zeros((num_samples, 3))
+        ang_gt = np.zeros((num_samples, 3))
+
+        k_max = num_samples
+        for k in range(k_max):
+            oxts_k = oxts[k]
+            t[k] = k * 0.01  # Assuming a constant timestep for simplicity; replace with actual timestamp if available
+            p_gt[k] = oxts_k[1][:3, 3]  # Position from the pose matrix
+            v_gt[k, 0] = oxts_k[0].ve
+            v_gt[k, 1] = oxts_k[0].vn
+            v_gt[k, 2] = oxts_k[0].vu
+            ang_gt[k, 0] = oxts_k[0].roll
+            ang_gt[k, 1] = oxts_k[0].pitch
+            ang_gt[k, 2] = oxts_k[0].yaw
+            acc[k, :] = [oxts_k[0].ax, oxts_k[0].ay, oxts_k[0].az]
+            gyro[k, :] = [oxts_k[0].wx, oxts_k[0].wy, oxts_k[0].wz]
+
+        # Normalize timestamps
+        t0 = t[0]
+        t = t - t0
+
+        u = np.concatenate((gyro, acc), -1)
+
+        # Convert numpy arrays to PyTorch tensors
+        t = torch.from_numpy(t).float()
+        p_gt = torch.from_numpy(p_gt).float()
+        v_gt = torch.from_numpy(v_gt).float()
+        ang_gt = torch.from_numpy(ang_gt).float()
+        u = torch.from_numpy(u).float()
+
+        mondict = {
+            't': t, 'p_gt': p_gt, 'ang_gt': ang_gt, 'v_gt': v_gt,
+            'u': u, 'name': 'merged_output_2', 't0': t0
+        }
+        USVDataset.dump(mondict, args.path_data_save, 'merged_output_2')
+        # Delete the original merged_output.p file
+        if os.path.exists('../data/merged_output.p'):
+            os.remove('../data/merged_output.p')
+            print("Original merged_output.p file deleted.")
+        else:
+            print("The file does not exist.")
+        
+        #########################################################
+        with open('../data/merged_output_2.p', 'rb') as f:
+            data = pickle.load(f)
+
+        if isinstance(data, dict):
+            print("Data type: dict")
+            print("Data keys: {}".format(list(data.keys())))  # dict의 키들을 출력
+
+            # 각 키에 해당하는 값의 앞부분을 출력 (예: 앞의 5개 요소)
+            for key, value in data.items():
+                print("\nKey: {}".format(key))
+                if isinstance(value, list) or isinstance(value, tuple):
+                    print("First 5 elements of {}: {}".format(key, value[:5]))
+                elif isinstance(value, dict):
+                    print("Keys of {}: {}".format(key, list(value.keys())[:5]))
+                elif isinstance(value, (int, float, str)):
+                    print("Value of {}: {}".format(key, value))
+                elif isinstance(value, torch.Tensor):
+                    print("Tensor shape: {}, First 5 elements: {}".format(value.shape, value[:5]))
+                else:
+                    print("Type: {}, First 5 elements: {}".format(type(value), str(value)[:100])) 
+
+        else:
+            print("Data is of type: {}".format(type(data)))
+        ######################################################################################
+            
+        print("\n Total dataset duration : {:.2f} s".format(t[-1] - t[0]))
+
+    def set_normalize_factors(self):
+        super().set_normalize_factors()
+
+    @staticmethod
+    def rotx(t):
+        """Rotation about the x-axis."""
+        c = np.cos(t)
+        s = np.sin(t)
+        return np.array([[1, 0, 0], [0, c, -s], [0, s, c]])
+
+    @staticmethod
+    def roty(t):
+        """Rotation about the y-axis."""
+        c = np.cos(t)
+        s = np.sin(t)
+        return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
+
+    @staticmethod
+    def rotz(t):
+        """Rotation about the z-axis."""
+        c = np.cos(t)
+        s = np.sin(t)
+        return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
+
+    @staticmethod
+    def pose_from_oxts_packet(packet, scale):
+        """Helper method to compute a SE(3) pose matrix from an OXTS packet."""
+        er = 6378137.  # earth radius (approx.) in meters
+
+        # Use a Mercator projection to get the translation vector
+        tx = scale * packet.lon * np.pi * er / 180.
+        ty = scale * er * np.log(np.tan((90. + packet.lat) * np.pi / 360.))
+        tz = packet.alt
+        t = np.array([tx, ty, tz])
+
+        # Use the Euler angles to get the rotation matrix
+        Rx = USVDataset.rotx(packet.roll)
+        Ry = USVDataset.roty(packet.pitch)
+        Rz = USVDataset.rotz(packet.yaw)
+        R = Rz.dot(Ry.dot(Rx))
+
+        # Combine the translation and rotation into a homogeneous transform
+        return R, t
+
+    @staticmethod
+    def transform_from_rot_trans(R, t):
+        """Transformation matrix from rotation matrix and translation vector."""
+        R = R.reshape(3, 3)
+        t = t.reshape(3, 1)
+        return np.vstack((np.hstack([R, t]), [0, 0, 0, 1]))
+
+    @staticmethod
+    def load_timestamps(data_path):
+        """Load timestamps from file."""
+        timestamp_file = os.path.join(data_path, 'oxts', 'timestamps.txt')
+
+        timestamps = []
+        with open(timestamp_file, 'r') as f:
+            for line in f.readlines():
+                t = datetime.datetime.strptime(line[:-4], '%Y-%m-%d %H:%M:%S.%f')
+                timestamps.append(t)
+        return timestamps
 
 
 def test_filter(args, dataset):
@@ -162,7 +334,7 @@ class USVArgs:  # 클래스 이름 및 경로 수정
     continue_training = True
 
     # choose what to do
-    read_data = 1
+    read_data = 0
     train_filter = 1
     test_filter = 0
     results_filter = 0

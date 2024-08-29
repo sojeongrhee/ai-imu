@@ -414,7 +414,6 @@ class KITTIDataset(BaseDataset):
                 timestamps.append(t)
         return timestamps
 
-
 def test_filter(args, dataset):
     iekf = IEKF()
     torch_iekf = TORCHIEKF()

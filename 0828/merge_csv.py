@@ -69,8 +69,16 @@ merged_df.to_csv('merged_output.csv', index=False)
 
 print("Merged CSV file created successfully!")
 
-# Save as a pickle file
+# Save the DataFrame as a pickle file
 with open('merged_output.p', 'wb') as f:
     pickle.dump(merged_df, f)
 
 print("Merged CSV file created and saved as a pickle file successfully!")
+
+
+# Load the pickle file
+with open('merged_output.p', 'rb') as f:
+    loaded_df = pickle.load(f)
+
+# Display the first few rows
+print(loaded_df.head())

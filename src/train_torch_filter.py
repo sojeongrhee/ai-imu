@@ -59,6 +59,7 @@ def compute_delta_p(Rot, p):
 def train_filter(args, dataset):
     iekf = prepare_filter(args, dataset)
     prepare_loss_data(args, dataset)
+    import pdb; pdb.set_trace()
     save_iekf(args, iekf)
     optimizer = set_optimizer(iekf)
     start_time = time.time()
@@ -89,14 +90,14 @@ def prepare_filter(args, dataset):
 
 def prepare_loss_data(args, dataset):
 
-
-
     file_delta_p = os.path.join(args.path_temp, 'delta_p.p')
     if os.path.isfile(file_delta_p):
         mondict = dataset.load(file_delta_p)
         dataset.list_rpe = mondict['list_rpe']
         dataset.list_rpe_validation = mondict['list_rpe_validation']
+        print("11111111")
         if set(dataset.datasets_train_filter.keys()) <= set(dataset.list_rpe.keys()): 
+            print("222222")
             return
 
     # prepare delta_p_gt

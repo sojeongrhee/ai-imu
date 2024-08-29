@@ -80,19 +80,24 @@ class BaseDataset(Dataset):
 
     def set_normalize_factors(self):
         path_normalize_factor = os.path.join(self.path_temp, self.file_normalize_factor)
+        print("path_normalize_factor : ", path_normalize_factor)
         # we set factors only if file does not exist
+
         if os.path.isfile(path_normalize_factor):
             pickle_dict = self.load(path_normalize_factor)
             self.normalize_factors = pickle_dict['normalize_factors']
             self.num_data = pickle_dict['num_data']
             return
-
+        
         # first compute mean
         self.num_data = 0
 
         for i, dataset in enumerate(self.datasets_train):
             pickle_dict = self.load(self.path_data_save, dataset)
+            print("dataset : ", dataset)
+            print("1111111")
             u = pickle_dict['u']
+            print("2222222")
             if i == 0:
                 u_loc = u.sum(dim=0)
             else:
@@ -104,6 +109,7 @@ class BaseDataset(Dataset):
         for i, dataset in enumerate(self.datasets_train):
             pickle_dict = self.load(self.path_data_save, dataset)
             u = pickle_dict['u']
+            print("3333333333")
             if i == 0:
                 u_std = ((u - u_loc) ** 2).sum(dim=0)
             else:
