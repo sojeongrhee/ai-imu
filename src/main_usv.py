@@ -90,6 +90,7 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
 
         # self.pickle_path = os.path.join(args.path_data_base, 'merged_output.p')
         self.datasets_train_filter["merged_output_2"] = [0, 15000]
+
         #########################################
         # # Load the pickle file
         # with open('../0828/merged_output.p', 'rb') as f:
@@ -146,7 +147,9 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
         for k in range(k_max):
             oxts_k = oxts[k]
             t[k] = k * 0.01  # Assuming a constant timestep for simplicity; replace with actual timestamp if available
-            p_gt[k] = oxts_k[1][:3, 3]  # Position from the pose matrix
+            p_gt[k, 0] = oxts_k[0].lat  # Position from the pose matrix
+            p_gt[k, 1] = oxts_k[0].lon
+            p_gt[k, 2] = oxts_k[0].alt
             v_gt[k, 0] = oxts_k[0].ve
             v_gt[k, 1] = oxts_k[0].vn
             v_gt[k, 2] = oxts_k[0].vu

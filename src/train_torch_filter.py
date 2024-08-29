@@ -28,12 +28,14 @@ def compute_delta_p(Rot, p):
     # sample at 1 Hz
     Rot = Rot[::10]
     p = p[::10]
+    print("Rot, p : ", Rot[0:5], p[0:5])
 
     step_size = 10  # every second
     distances = np.zeros(p.shape[0])
     dp = p[1:] - p[:-1]  #  this must be ground truth
+    print("dp : ", dp)
     distances[1:] = dp.norm(dim=1).cumsum(0).numpy()
-
+    print("distances : ", distances[1:])
     seq_lengths = [100, 200, 300, 400, 500, 600, 700, 800]
     k_max = int(Rot.shape[0] / step_size) - 1
 
@@ -47,12 +49,14 @@ def compute_delta_p(Rot, p):
 
             list_rpe[0].append(idx_0)
             list_rpe[1].append(idx_end)
+            print("distances : ", distances[idx_0], distances[-1])
 
         idxs_0 = list_rpe[0]
         idxs_end = list_rpe[1]
         delta_p = Rot[idxs_0].transpose(-1, -2).matmul(
             ((p[idxs_end] - p[idxs_0]).float()).unsqueeze(-1)).squeeze()
         list_rpe[2] = delta_p
+        
     return list_rpe
 
 
@@ -91,17 +95,50 @@ def prepare_filter(args, dataset):
 def prepare_loss_data(args, dataset):
 
     file_delta_p = os.path.join(args.path_temp, 'delta_p.p')
+    
     if os.path.isfile(file_delta_p):
         mondict = dataset.load(file_delta_p)
         dataset.list_rpe = mondict['list_rpe']
         dataset.list_rpe_validation = mondict['list_rpe_validation']
         print("11111111")
+        print("dataset_train_filter_keys : ", dataset.datasets_train_filter.keys())
+        print("dataset_list_rpe_keys : ", dataset.list_rpe.keys())
+
         if set(dataset.datasets_train_filter.keys()) <= set(dataset.list_rpe.keys()): 
-            print("222222")
             return
+        
+    ##########################################################debugging ############
+    #  # Load the pickle file
+    # import pickle
+    # with open('../temp/delta_p.p', 'rb') as f:
+    #         data = pickle.load(f)
+
+    # if isinstance(data, dict):
+    #     print("Data type: dict")
+    #     print("Data keys: {}".format(list(data.keys())))  # dict의 키들을 출력
+
+    #     # 각 키에 해당하는 값의 앞부분을 출력 (예: 앞의 5개 요소)
+    #     for key, value in data.items():
+    #         print("\nKey: {}".format(key))
+    #         if isinstance(value, list) or isinstance(value, tuple):
+    #             print("First 5 elements of {}: {}".format(key, value[:5]))
+    #         elif isinstance(value, dict):
+    #             print("Keys of {}: {}".format(key, list(value.keys())[:5]))
+    #         elif isinstance(value, (int, float, str)):
+    #             print("Value of {}: {}".format(key, value))
+    #         elif isinstance(value, torch.Tensor):
+    #             print("Tensor shape: {}, First 5 elements: {}".format(value.shape, value[:5]))
+    #         else:
+    #             print("Type: {}, First 5 elements: {}".format(type(value), str(value)[:100])) 
+
+    # else:
+    #     print("Data is of type: {}".format(type(data)))
+    # #######################################################################################
 
     # prepare delta_p_gt
     list_rpe = {}
+    print("dataset_train_filter_items : ", dataset.datasets_train_filter.items())
+
     for dataset_name, Ns in dataset.datasets_train_filter.items():
         t, ang_gt, p_gt, v_gt, u = prepare_data(args, dataset, dataset_name, 0)
         p_gt = p_gt.double()

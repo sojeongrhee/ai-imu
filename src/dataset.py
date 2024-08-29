@@ -69,7 +69,7 @@ class BaseDataset(Dataset):
         for dataset in self.datasets:
             if (not dataset in self.datasets_test) and (not dataset in self.datasets_validation):
                 self.datasets_train += [dataset]
-
+                
     def dataset_name(self, i):
         return self.datasets[i]
 

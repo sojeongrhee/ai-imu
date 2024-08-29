@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 def prepare_data(args, dataset, dataset_name, i, idx_start=None, idx_end=None, to_numpy=False):
     # get data
     t, ang_gt, p_gt, v_gt, u = dataset.get_data(dataset_name)
-
+    print("p_gt : ", p_gt)
     # get start instant
     if idx_start is None:
         idx_start = 0
@@ -27,6 +27,7 @@ def prepare_data(args, dataset, dataset_name, i, idx_start=None, idx_end=None, t
         ang_gt = ang_gt.cpu().double().numpy()
         v_gt = v_gt.cpu().double().numpy()
         p_gt = p_gt.cpu().double().numpy()
+
     return t, ang_gt, p_gt, v_gt, u
 
 
