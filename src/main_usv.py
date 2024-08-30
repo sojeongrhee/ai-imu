@@ -66,6 +66,10 @@ class USVParameters(IEKF.Parameters):  # 클래스 이름 변경
 
 
 class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
+
+    odometry_benchmark = OrderedDict()
+    odometry_benchmark["merged_output_0830_2"] = [0, 29912]
+
     def __init__(self, args):
         # super(USVDataset, self).__init__(args)
         self.path_data_save = args.path_data_save
@@ -90,7 +94,8 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
 
         # self.pickle_path = os.path.join(args.path_data_base, 'merged_output.p')
         self.datasets_train_filter["merged_output_0830_2"] = [0, 20000]
-        self.datasets_train_filter["merged_output_2"] = [0, 30000]
+        # self.datasets_train_filter["merged_output_2"] = [0, 30000]
+        self.datasets_validatation_filter['merged_output_0830_2'] = [20001, 29000]
 
         #########################################
         # # Load the pickle file
@@ -333,8 +338,8 @@ class USVArgs:  # 클래스 이름 및 경로 수정
     seq_dim = 6000
 
     # training, cross-validation and test dataset
-    cross_validation_sequences = ['IMU_converted_processed']
-    test_sequences = ['IMU_converted_processed']
+    cross_validation_sequences = ['merged_output_0830_2']
+    test_sequences = ['merged_output_0830_2']
     continue_training = True
 
     # choose what to do

@@ -48,7 +48,9 @@ def compute_delta_p(Rot, p):
         Notice 1 : 따라서 seq_lengths를 적절히 조정해야 함
         Notice 2 : 1/10 scale로 하면 학습 loop는 돌아가나 loss가 제대로 나오지 않는 문제가 있음
     """
-    seq_lengths = [10, 20, 30, 40, 50, 60, 70, 80]
+    # seq_lengths = [10, 20, 30, 40, 50, 60, 70, 80]
+    seq_lengths = [5, 10, 15, 20, 25, 30, 35, 40]
+    # seq_lengths = [10, 11, 12, 13, 14, 15, 16, 17]
     k_max = int(Rot.shape[0] / step_size) - 1
     print("k_max : ", k_max)
     for k in range(0, k_max):
@@ -90,7 +92,7 @@ def train_filter(args, dataset):
     for epoch in range(1, args.epochs + 1):
         train_loop(args, dataset, epoch, iekf, optimizer, args.seq_dim)
         save_iekf(args, iekf)
-        print("Amount of time spent for 1 epoch: {}s\n".format(int(time.time() - start_time)))
+        print("Amount of time spent for {} epoch: {}s\n".format(epoch, int(time.time() - start_time)))
         start_time = time.time()
 
 
@@ -211,7 +213,7 @@ def train_loop(args, dataset, epoch, iekf, optimizer, seq_dim):
         # print("t, ang_gt, p_gt, v_gt, u :", t, ang_gt, p_gt, v_gt, u )
         loss = mini_batch_step(dataset, dataset_name, iekf,
                                dataset.list_rpe[dataset_name], t, ang_gt, p_gt, v_gt, u, N0)
-        print("loss : ",i, loss)
+        print("loss {} : {} ".format(i, loss))
 
         if loss is -1 or torch.isnan(loss):
             cprint("{} loss is invalid".format(i), 'yellow')
