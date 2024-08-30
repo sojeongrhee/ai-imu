@@ -26,11 +26,14 @@ def compute_delta_p(Rot, p):
     list_rpe = [[], [], []]  # [idx_0, idx_end, pose_delta_p]
 
     # sample at 1 Hz
-    Rot = Rot[::10]
-    p = p[::10]
+    # Rot = Rot[::10]
+    # p = p[::10]
+    Rot = Rot[::3]
+    p = p[::3]
     print("Rot, p : ", Rot[0:5], p[0:5])
 
-    step_size = 10  # every second
+    # step_size = 10  # every second
+    step_size = 3
     distances = np.zeros(p.shape[0])
     dp = p[1:] - p[:-1]  #  this must be ground truth
     print("dp : ", dp)
@@ -39,19 +42,20 @@ def compute_delta_p(Rot, p):
 
     """
         ########################### Important Notice ############################## 
-        seq_lengths가 초기처럼 [0, 100, 200, 300, 400, 500, 600, 700, 800]으로 설정되면
+        seq_lengths가 초기처럼 [100, 200, 300, 400, 500, 600, 700, 800]으로 설정되면
         if seq_length + distances[idx_0] > distances[-1]: 조건이 항상 True여서
         for문을 단순히 iterate하므로 list_rpe가 저장되지 않는 문제가 있음
         Notice 1 : 따라서 seq_lengths를 적절히 조정해야 함
         Notice 2 : 1/10 scale로 하면 학습 loop는 돌아가나 loss가 제대로 나오지 않는 문제가 있음
     """
-    seq_lengths = [0, 10, 20, 30, 40, 50, 60, 70, 80]
+    seq_lengths = [10, 20, 30, 40, 50, 60, 70, 80]
     k_max = int(Rot.shape[0] / step_size) - 1
-
+    print("k_max : ", k_max)
     for k in range(0, k_max):
         idx_0 = k * step_size
         print("idx_0 : ", idx_0)
         print("distances[-1]", distances[-1])
+        # import pdb; pdb.set_trace()
         for seq_length in seq_lengths:
             if seq_length + distances[idx_0] > distances[-1]:
                 print("3333333333")
@@ -61,9 +65,10 @@ def compute_delta_p(Rot, p):
             idx_end = idx_0 + idx_shift
             print("22222222222222222")
             list_rpe[0].append(idx_0)
-            print("list_rpe[0]", list_rpe[0])
+            # print("list_rpe[0]", list_rpe[0])
             list_rpe[1].append(idx_end)
             print("distances : ", distances[idx_0], distances[-1])
+        
 
         idxs_0 = list_rpe[0]
         idxs_end = list_rpe[1]
@@ -203,9 +208,10 @@ def train_loop(args, dataset, epoch, iekf, optimizer, seq_dim):
     for i, (dataset_name, Ns) in enumerate(dataset.datasets_train_filter.items()):
         t, ang_gt, p_gt, v_gt, u, N0 = prepare_data_filter(dataset, dataset_name, Ns,
                                                                   iekf, seq_dim)
-
+        # print("t, ang_gt, p_gt, v_gt, u :", t, ang_gt, p_gt, v_gt, u )
         loss = mini_batch_step(dataset, dataset_name, iekf,
                                dataset.list_rpe[dataset_name], t, ang_gt, p_gt, v_gt, u, N0)
+        print("loss : ",i, loss)
 
         if loss is -1 or torch.isnan(loss):
             cprint("{} loss is invalid".format(i), 'yellow')
@@ -246,6 +252,7 @@ def mini_batch_step(dataset, dataset_name, iekf, list_rpe, t, ang_gt, p_gt, v_gt
                                                             v_gt, p_gt, t.shape[0],
                                                             ang_gt[0])
     delta_p, delta_p_gt = precompute_lost(Rot, p, list_rpe, N0)
+    # print("delta_p, delta_p_gt : ", delta_p[:5], delta_p_gt[:5])
     if delta_p is None:
         return -1
     loss = criterion(delta_p, delta_p_gt)
@@ -301,8 +308,10 @@ def get_start_and_end(seq_dim, u):
 
 def precompute_lost(Rot, p, list_rpe, N0):
     N = p.shape[0]
-    Rot_10_Hz = Rot[::10]
-    p_10_Hz = p[::10]
+    # Rot_10_Hz = Rot[::10]
+    # p_10_Hz = p[::10]
+    Rot_10_Hz = Rot[::3]
+    p_10_Hz = p[::3]
     idxs_0 = torch.Tensor(list_rpe[0]).clone().long() - int(N0 / 10)
     idxs_end = torch.Tensor(list_rpe[1]).clone().long() - int(N0 / 10)
     delta_p_gt = list_rpe[2]
