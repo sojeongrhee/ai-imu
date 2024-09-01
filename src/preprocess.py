@@ -249,65 +249,66 @@ def run(datapath, exp_list) :
         # Extract the relevant fields
         merged_data = []
         for i in processed_idx :
-            ekf_time = ekf_df.iloc[i[0]]
-            gps_data = ekf_df.iloc[i[1]]
+            ekf_timestamp_ns = ekf_df.iloc[i[0],0]
+            ekf_row = ekf_df.iloc[i[1]]
             imu_row = imu_df.iloc[i[2]]
-            row = {
-                '%time': ekf_time,
-                'lat': gps_data['field.pos_x'],
-                'lon': gps_data['field.pos_y'],
-                'alt': gps_data['field.pos_z'],
-                'roll': gps_data['field.ori_r'],
-                'pitch': gps_data['field.ori_p'],
-                'yaw': gps_data['field.ori_y'],
-                'vn': gps_data['field.vel_x'],
-                've': gps_data['field.vel_y'],
-                'vu': gps_data['field.vel_z'],
+            
+            merged_row = {
+                '%time': datetime.fromtimestamp(ekf_timestamp_ns / 1e9).isoformat(),
+                'lat': ekf_row['field.pos_x'],
+                'lon': ekf_row['field.pos_y'],
+                'alt': ekf_row['field.pos_z'],
+                'roll': ekf_row['field.ori_r'],
+                'pitch': ekf_row['field.ori_p'],
+                'yaw': ekf_row['field.ori_y'],
+                'vn': ekf_row['field.vel_x'],
+                've': ekf_row['field.vel_y'],
+                'vu': ekf_row['field.vel_z'],
                 'ax': imu_row['field.linear_acceleration.x'],
                 'ay': imu_row['field.linear_acceleration.y'],
                 'az': imu_row['field.linear_acceleration.z'],
-                'af': imu_row['field.linear_acceleration.x'],
-                'al': imu_row['field.linear_acceleration.y'],
-                'au': imu_row['field.linear_acceleration.z'],
+                'af': imu_row['field.linear_acceleration.x'],  # Duplicates as per instruction
+                'al': imu_row['field.linear_acceleration.y'],  # Duplicates as per instruction
+                'au': imu_row['field.linear_acceleration.z'],  # Duplicates as per instruction
                 'wx': imu_row['field.angular_velocity.x'],
                 'wy': imu_row['field.angular_velocity.y'],
                 'wz': imu_row['field.angular_velocity.z'],
-                'wf': imu_row['field.angular_velocity.x'],
-                'wl': imu_row['field.angular_velocity.y'],
-                'wu': imu_row['field.angular_velocity.z']
+                'wf': imu_row['field.angular_velocity.x'],  # Duplicates as per instruction
+                'wl': imu_row['field.angular_velocity.y'],  # Duplicates as per instruction
+                'wu': imu_row['field.angular_velocity.z'],  # Duplicates as per instruction
             }
+            #pdb.set_trace()
+            merged_data.append(merged_row)
             
-            merged_data.append(row)
             
-            
-        # print("merged data: ",len(merged_data))
-        # # Convert merged data to a DataFrame with the desired column order
-        # column_order = [
-        #     '%time', 'lat', 'lon', 'alt', 'roll', 'pitch', 'yaw', 
-        #     'vn', 've', 'vu', 'ax', 'ay', 'az', 'af', 'al', 'au', 
-        #     'wx', 'wy', 'wz', 'wf', 'wl', 'wu'
-        # ]
+        print("merged data: ",len(merged_data))
+        # Convert merged data to a DataFrame with the desired column order
+        column_order = [
+            '%time', 'lat', 'lon', 'alt', 'roll', 'pitch', 'yaw', 
+            'vn', 've', 'vu', 'ax', 'ay', 'az', 'af', 'al', 'au', 
+            'wx', 'wy', 'wz', 'wf', 'wl', 'wu'
+        ]
 
-        # merged_df = pd.DataFrame(merged_data, columns=column_order)
+        merged_df = pd.DataFrame(merged_data, columns=column_order)
 
-        # # Save the merged data to a new CSV file
-        # merged_df.to_csv(os.join(datapath,'merged_output{}.csv'.format(exp_num)), index=False)
+        # Save the merged data to a new CSV file
+        merged_df.to_csv(os.path.join(datapath,'merged_output{}.csv'.format(exp_num)), index=False)
 
-        # print("Merged CSV file created successfully!")
+        print("Merged CSV file created successfully!")
 
-        # # Save the DataFrame as a pickle file
-        # with open(os.join(datapath,'merged_output{}.p'.format(exp_num)), 'wb') as f:
-        #     pickle.dump(merged_df, f)
+        # Save the DataFrame as a pickle file
+        with open(os.path.join(datapath,'merged_output{}.p'.format(exp_num)), 'wb') as f:
+            pickle.dump(merged_df, f)
 
-        # print("Merged CSV file created and saved as a pickle file successfully!")
+        print("Merged CSV file created and saved as a pickle file successfully!")
 
 
-        # # Load the pickle file
-        # with open(os.join(datapath,'merged_output{}.p'.format(exp_num)), 'rb') as f:
-        #     loaded_df = pickle.load(f)
+        # Load the pickle file
+        with open(os.path.join(datapath,'merged_output{}.p'.format(exp_num)), 'rb') as f:
+            loaded_df = pickle.load(f)
 
-        # # Display the first few rows
-        # print(loaded_df.head())
+        # Display the first few rows
+        print(loaded_df.head())
 
 if __name__=="__main__" : 
     data_path = "../dataset/sheco_data"
