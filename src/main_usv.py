@@ -66,6 +66,10 @@ class USVParameters(IEKF.Parameters):  # 클래스 이름 변경
 
 
 class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
+
+    odometry_benchmark = OrderedDict()
+    odometry_benchmark["merged_output_0830_2"] = [0, 29912]
+
     def __init__(self, args):
         # super(USVDataset, self).__init__(args)
         self.path_data_save = args.path_data_save
@@ -89,7 +93,9 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
         self.get_datasets()  
 
         # self.pickle_path = os.path.join(args.path_data_base, 'merged_output.p')
-        self.datasets_train_filter["merged_output_2"] = [0, 15000]
+        self.datasets_train_filter["merged_output_0830_2"] = [0, 20000]
+        # self.datasets_train_filter["merged_output_2"] = [0, 30000]
+        self.datasets_validatation_filter['merged_output_0830_2'] = [20001, 29000]
 
         #########################################
         # # Load the pickle file
@@ -129,7 +135,7 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
         """
         t_tot = 0
         # Load data from merged_output.p
-        with open(args.path_data_base + '/merged_output.p', 'rb') as f:
+        with open(args.path_data_base + '/merged_output_0830.p', 'rb') as f:
             data = pickle.load(f)
 
         oxts = USVDataset.load_oxts_packets_and_poses(data)
@@ -174,18 +180,18 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
 
         mondict = {
             't': t, 'p_gt': p_gt, 'ang_gt': ang_gt, 'v_gt': v_gt,
-            'u': u, 'name': 'merged_output_2', 't0': t0
+            'u': u, 'name': 'merged_output_0830_2', 't0': t0
         }
-        USVDataset.dump(mondict, args.path_data_save, 'merged_output_2')
+        USVDataset.dump(mondict, args.path_data_save, 'merged_output_0830_2')
         # Delete the original merged_output.p file
-        if os.path.exists('../data/merged_output.p'):
-            os.remove('../data/merged_output.p')
-            print("Original merged_output.p file deleted.")
+        if os.path.exists('../data/merged_output_0830.p'):
+            os.remove('../data/merged_output_0830.p')
+            print("Original merged_output_0830.p file deleted.")
         else:
             print("The file does not exist.")
         
         #########################################################
-        with open('../data/merged_output_2.p', 'rb') as f:
+        with open('../data/merged_output_0830_2.p', 'rb') as f:
             data = pickle.load(f)
 
         if isinstance(data, dict):
@@ -332,8 +338,8 @@ class USVArgs:  # 클래스 이름 및 경로 수정
     seq_dim = 6000
 
     # training, cross-validation and test dataset
-    cross_validation_sequences = ['IMU_converted_processed']
-    test_sequences = ['IMU_converted_processed']
+    cross_validation_sequences = ['merged_output_0830_2']
+    test_sequences = ['merged_output_0830_2']
     continue_training = True
 
     # choose what to do
