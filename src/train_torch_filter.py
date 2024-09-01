@@ -46,24 +46,25 @@ def compute_delta_p(Rot, p):
         Notice 2 : 1/10 scale로 하면 학습 loop는 돌아가나 loss가 제대로 나오지 않는 문제가 있음
     """
     seq_lengths = [0, 10, 20, 30, 40, 50, 60, 70, 80]
+    #seq_lengths = [100, 200, 300, 400, 500, 600, 700, 800]
     k_max = int(Rot.shape[0] / step_size) - 1
 
     for k in range(0, k_max):
         idx_0 = k * step_size
-        print("idx_0 : ", idx_0)
-        print("distances[-1]", distances[-1])
+        #print("idx_0 : ", idx_0)
+        #print("distances[-1]", distances[-1])
         for seq_length in seq_lengths:
             if seq_length + distances[idx_0] > distances[-1]:
-                print("3333333333")
+                #print("3333333333")
                 continue
-            print("1111111111111111")
+            #print("1111111111111111")
             idx_shift = np.searchsorted(distances[idx_0:], distances[idx_0] + seq_length)
             idx_end = idx_0 + idx_shift
-            print("22222222222222222")
+            #print("22222222222222222")
             list_rpe[0].append(idx_0)
-            print("list_rpe[0]", list_rpe[0])
+            #print("list_rpe[0]", list_rpe[0])
             list_rpe[1].append(idx_end)
-            print("distances : ", distances[idx_0], distances[-1])
+            #print("distances : ", distances[idx_0], distances[-1])
 
         idxs_0 = list_rpe[0]
         idxs_end = list_rpe[1]
