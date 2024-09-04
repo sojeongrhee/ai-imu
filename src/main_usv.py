@@ -68,7 +68,9 @@ class USVParameters(IEKF.Parameters):  # 클래스 이름 변경
 class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
 
     odometry_benchmark = OrderedDict()
-    odometry_benchmark["merged_output_0830_2"] = [0, 29912]
+    odometry_benchmark["merged_output1"] = [0, 20000]
+    # odometry_benchmark["merged_output_2"] = [0, 25697]
+    # odometry_benchmark["merged_output_3"] = [0, 25982]
 
     def __init__(self, args):
         # super(USVDataset, self).__init__(args)
@@ -93,9 +95,9 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
         self.get_datasets()  
 
         # self.pickle_path = os.path.join(args.path_data_base, 'merged_output.p')
-        self.datasets_train_filter["merged_output_0830_2"] = [0, 20000]
+        self.datasets_train_filter["merged_output1"] = [0, 20000]
         # self.datasets_train_filter["merged_output_2"] = [0, 30000]
-        self.datasets_validatation_filter['merged_output_0830_2'] = [20001, 29000]
+        # self.datasets_validatation_filter['merged_output1'] = [20001, 29000]
 
         #########################################
         # # Load the pickle file
@@ -110,19 +112,36 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
 
     @staticmethod
     def load_oxts_packets_and_poses(data):
-        """Converts data from merged_output DataFrame to the required format."""
+        """Converts data from merged_output DataFrame (or dict) to the required format."""
+        # Check if data is a dict and convert it to DataFrame
+        if isinstance(data, dict):
+            data = pd.DataFrame(data)
+
+        print("data : {}".format(data[:5]))
+
         poses = []
         packets = []
+        
+        # Define the packet structure with a valid identifier for time
+        OxtsPacket = namedtuple('OxtsPacket', 'time, lat, lon, alt, roll, pitch, yaw, vn, ve, vu, ax, ay, az, wx, wy, wz')
+
         for _, row in data.iterrows():
-            packet = namedtuple('OxtsPacket', 'lat, lon, alt, roll, pitch, yaw, vn, ve, vu, ax, ay, az, wx, wy, wz')
-            pose = np.eye(4)  # 4x4 identity matrix as placeholder
+            # Create the pose matrix (4x4 identity matrix)
+            pose = np.eye(4)
+            # Convert roll, pitch, yaw to rotation matrix
             Rot = USVDataset.rotz(row['yaw']).dot(USVDataset.roty(row['pitch'])).dot(USVDataset.rotx(row['roll']))
-            pose[:3, :3] = Rot  # Convert roll, pitch, yaw to rotation matrix
+            pose[:3, :3] = Rot
+            # Convert lat, lon, alt to NED coordinates
             pose[:3, 3] = lla2ned(row['lat'], row['lon'], row['alt'], row['lat'], row['lon'], row['alt'])
-            packets.append(packet(row['lat'], row['lon'], row['alt'], row['roll'], row['pitch'], row['yaw'],
-                                  row['vn'], row['ve'], row['vu'], row['ax'], row['ay'], row['az'],
-                                  row['wx'], row['wy'], row['wz']))
+            
+            # Create the OxtsPacket including the 'time' (formerly '%time')
+            packet = OxtsPacket(row['%time'], row['lat'], row['lon'], row['alt'], row['roll'], row['pitch'], row['yaw'],
+                                row['vn'], row['ve'], row['vu'], row['ax'], row['ay'], row['az'],
+                                row['wx'], row['wy'], row['wz'])
+            
+            packets.append(packet)
             poses.append(pose)
+        
         return list(zip(packets, poses))
 
     @staticmethod
@@ -135,7 +154,7 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
         """
         t_tot = 0
         # Load data from merged_output.p
-        with open(args.path_data_base + '/merged_output_0830.p', 'rb') as f:
+        with open(args.path_data_base + '/merged_output1.p', 'rb') as f:
             data = pickle.load(f)
 
         oxts = USVDataset.load_oxts_packets_and_poses(data)
@@ -180,18 +199,18 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
 
         mondict = {
             't': t, 'p_gt': p_gt, 'ang_gt': ang_gt, 'v_gt': v_gt,
-            'u': u, 'name': 'merged_output_0830_2', 't0': t0
+            'u': u, 'name': 'merged_output1', 't0': t0
         }
-        USVDataset.dump(mondict, args.path_data_save, 'merged_output_0830_2')
+        USVDataset.dump(mondict, args.path_data_save, 'merged_output1')
         # Delete the original merged_output.p file
-        if os.path.exists('../data/merged_output_0830.p'):
-            os.remove('../data/merged_output_0830.p')
-            print("Original merged_output_0830.p file deleted.")
+        if os.path.exists('../data/merged_output1.p'):
+            os.remove('../data/merged_output1.p')
+            print("Original merged_output1.p file deleted.")
         else:
             print("The file does not exist.")
         
         #########################################################
-        with open('../data/merged_output_0830_2.p', 'rb') as f:
+        with open('../data/merged_output1.p', 'rb') as f:
             data = pickle.load(f)
 
         if isinstance(data, dict):
