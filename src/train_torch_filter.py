@@ -52,7 +52,7 @@ def compute_delta_p(Rot, p):
     seq_lengths = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4.0]
     # seq_lengths = [10, 11, 12, 13, 14, 15, 16, 17]
     k_max = int(Rot.shape[0] / step_size) - 1
-    idx_diff = [0,0,0,0,0,0,0,0]
+    idx_diff = [np.inf]*len(seq_lengths)
     print("k_max : ", k_max)
     for k in range(0, k_max):
         idx_0 = k * step_size
@@ -61,7 +61,6 @@ def compute_delta_p(Rot, p):
         # import pdb; pdb.set_trace()
         j = 0
         for seq_length in seq_lengths:
-            j+1
             if seq_length + distances[idx_0] > distances[-1]:
                 continue
             idx_shift = np.searchsorted(distances[idx_0:], distances[idx_0] + seq_length)
@@ -71,7 +70,8 @@ def compute_delta_p(Rot, p):
             list_rpe[1].append(idx_end)
             # print("distances : ", distances[idx_0], distances[-1])
             idx_diff[j] = min(idx_shift, idx_diff[j])
-
+            j+=1
+    print(idx_diff)
     idxs_0 = list_rpe[0]
     idxs_end = list_rpe[1]
     delta_p = Rot[idxs_0].transpose(-1, -2).matmul(
