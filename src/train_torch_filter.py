@@ -38,7 +38,7 @@ def compute_delta_p(Rot, p):
     dp = p[1:] - p[:-1]  #  this must be ground truth
     print("dp : ", dp)
     distances[1:] = dp.norm(dim=1).cumsum(0).numpy()
-    print("distances : ", distances[1:])
+    # print("distances : ", distances[1:])
 
     """
         ########################### Important Notice ############################## 
@@ -49,7 +49,7 @@ def compute_delta_p(Rot, p):
         Notice 2 : 1/10 scale로 하면 학습 loop는 돌아가나 loss가 제대로 나오지 않는 문제가 있음
     """
     seq_lengths = [10, 20, 30, 40, 50, 60, 70, 80]
-    #seq_lengths = [5, 10, 15, 20, 25, 30, 35, 40]
+    # seq_lengths = [5, 10, 15, 20, 25, 30, 35, 40]
     # seq_lengths = [10, 11, 12, 13, 14, 15, 16, 17]
     k_max = int(Rot.shape[0] / step_size) - 1
     print("k_max : ", k_max)
@@ -60,23 +60,24 @@ def compute_delta_p(Rot, p):
         # import pdb; pdb.set_trace()
         for seq_length in seq_lengths:
             if seq_length + distances[idx_0] > distances[-1]:
-                #print("3333333333")
+                print("3333333333")
                 continue
-            #print("1111111111111111")
+            print("1111111111111111")
             idx_shift = np.searchsorted(distances[idx_0:], distances[idx_0] + seq_length)
             idx_end = idx_0 + idx_shift
-            #print("22222222222222222")
+            print("22222222222222222")
             list_rpe[0].append(idx_0)
             # print("list_rpe[0]", list_rpe[0])
             list_rpe[1].append(idx_end)
-            #print("distances : ", distances[idx_0], distances[-1])
-            
-    idxs_0 = list_rpe[0]
-    idxs_end = list_rpe[1]
-    delta_p = Rot[idxs_0].transpose(-1, -2).matmul(
-        ((p[idxs_end] - p[idxs_0]).float()).unsqueeze(-1)).squeeze()
-    list_rpe[2] = delta_p
-    print("list_rpe : ", len(list_rpe[0]), len(list_rpe[1]), len(list_rpe[2]))
+            # print("distances : ", distances[idx_0], distances[-1])
+        
+
+        idxs_0 = list_rpe[0]
+        idxs_end = list_rpe[1]
+        delta_p = Rot[idxs_0].transpose(-1, -2).matmul(
+            ((p[idxs_end] - p[idxs_0]).float()).unsqueeze(-1)).squeeze()
+        list_rpe[2] = delta_p
+        # print("list_rpe : ", list_rpe[0], list_rpe[1], list_rpe[2])
     return list_rpe
 
 
@@ -120,7 +121,7 @@ def prepare_loss_data(args, dataset):
         mondict = dataset.load(file_delta_p)
         dataset.list_rpe = mondict['list_rpe']
         dataset.list_rpe_validation = mondict['list_rpe_validation']
-        #print("11111111")
+        # print("11111111")
         print("dataset_train_filter_keys : ", dataset.datasets_train_filter.keys())
         print("dataset_list_rpe_keys : ", dataset.list_rpe.keys())
 
@@ -247,6 +248,7 @@ def save_iekf(args, iekf):
 
 
 def mini_batch_step(dataset, dataset_name, iekf, list_rpe, t, ang_gt, p_gt, v_gt, u, N0):
+    import pdb; pdb.set_trace()
     iekf.set_Q()
     import pdb
     pdb.set_trace()

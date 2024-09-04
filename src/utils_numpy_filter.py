@@ -217,8 +217,9 @@ class NUMPYIEKF:
         v_imu = Rot.T.dot(v)
         # velocity in body frame
         v_body = Rot_c_i.T.dot(v_imu)
-        # velocity in body frame in the vehicle axis
-        v_body += self.skew(t_c_i).dot(u[:3] - b_omega)
+        # # velocity in body frame in the vehicle axis
+        # v_body += self.skew(t_c_i).dot(u[:3] - b_omega)
+        v_body = Rot_c_i.T.dot(v_imu + self.skew(u[:3] - b_omega).dot(t_c_i))
         Omega = self.skew(u[:3] - b_omega)
 
         # Jacobian w.r.t. car frame

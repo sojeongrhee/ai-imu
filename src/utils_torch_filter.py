@@ -230,7 +230,8 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         Omega = self.skew(omega)
         # Jacobian in car frame
         H_v_imu = Rot_c_i.t().mm(self.skew(v_imu))
-        H_t_c_i = self.skew(t_c_i)
+        # H_t_c_i = self.skew(t_c_i)
+        H_t_c_i = -self.skew(t_c_i)
 
         H = P.new_zeros(2, self.P_dim)
         H[:, 3:6] = Rot_body.t()[1:]
