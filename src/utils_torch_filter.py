@@ -69,9 +69,13 @@ class MesNet(torch.nn.Module):
             self.cov_lin = torch.nn.Sequential(torch.nn.Linear(32, 2),
                                               torch.nn.Tanh(),
                                               ).double()
+            
             self.cov_lin[0].bias.data[:] /= 100
             self.cov_lin[0].weight.data[:] /= 100
-
+            #self.cov_lin = torch.nn.Linear(32, 2).double()
+            #self.cov_lin.bias.data[:] /= 100
+            #self.cov_lin.weight.data[:] /= 100
+            #self.cov_lin_tanh = torch.nn.Tanh().double()
         def forward(self, u, iekf):
             y_cov = self.cov_net(u).transpose(0, 2).squeeze()
             z_cov = self.cov_lin(y_cov)
@@ -249,8 +253,9 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
     @staticmethod
     def state_and_cov_update(Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P, H, r, R):
         S = H.mm(P).mm(H.t()) + R
-        Kt, _ = torch.gesv(P.mm(H.t()).t(), S)
-        K = Kt.t()
+        #Kt, _ = torch.gesv(P.mm(H.t()).t(), S)
+        Kt = torch.linalg.lstsq(P.mm(H.t()).t(), S).solution
+        K = Kt
         dx = K.mv(r.view(-1))
 
         dR, dxi = TORCHIEKF.sen3exp(dx[:9])
@@ -502,3 +507,4 @@ def prepare_filter(args, dataset):
     iekf = NUMPYIEKF(args.parameter_class)
     iekf.set_learned_covariance(torch_iekf)
     return iekf, torch_iekf
+

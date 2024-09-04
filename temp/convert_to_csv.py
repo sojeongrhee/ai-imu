@@ -5,7 +5,7 @@ import torch
 # Pickle 파일 로드
 # with open('../data/merged_output_2.p', 'rb') as f:
 #     data = pickle.load(f)
-with open('normalize_factors.p', 'rb') as f:
+with open('delta_p.p', 'rb') as f:
     data = pickle.load(f)
 
 # 데이터가 dict 타입인 경우 CSV로 저장

@@ -91,13 +91,12 @@ class BaseDataset(Dataset):
         
         # first compute mean
         self.num_data = 0
-
+        u_loc = 0
+        
         for i, dataset in enumerate(self.datasets_train):
             pickle_dict = self.load(self.path_data_save, dataset)
-            print("dataset : ", dataset)
-            print("1111111")
+            print("compute mean dataset : ", dataset)
             u = pickle_dict['u']
-            print("2222222")
             if i == 0:
                 u_loc = u.sum(dim=0)
             else:
@@ -105,11 +104,12 @@ class BaseDataset(Dataset):
             self.num_data += u.shape[0]
         u_loc = u_loc / self.num_data
 
+        u_std = 0
         # second compute standard deviation
         for i, dataset in enumerate(self.datasets_train):
+            print("compute std dataset : ", dataset)
             pickle_dict = self.load(self.path_data_save, dataset)
             u = pickle_dict['u']
-            print("3333333333")
             if i == 0:
                 u_std = ((u - u_loc) ** 2).sum(dim=0)
             else:

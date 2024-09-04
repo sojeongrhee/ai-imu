@@ -36,7 +36,7 @@ def compute_delta_p(Rot, p):
     step_size = 7
     distances = np.zeros(p.shape[0])
     dp = p[1:] - p[:-1]  #  this must be ground truth
-    print("dp : ", dp)
+    print("dp : ", dp, "p shape: ",p.shape[0])
     distances[1:] = dp.norm(dim=1).cumsum(0).numpy()
     # print("distances : ", distances[1:])
 
@@ -48,36 +48,36 @@ def compute_delta_p(Rot, p):
         Notice 1 : 따라서 seq_lengths를 적절히 조정해야 함
         Notice 2 : 1/10 scale로 하면 학습 loop는 돌아가나 loss가 제대로 나오지 않는 문제가 있음
     """
-    seq_lengths = [10, 20, 30, 40, 50, 60, 70, 80]
-    # seq_lengths = [5, 10, 15, 20, 25, 30, 35, 40]
+    # seq_lengths = [10, 20, 30, 40, 50, 60, 70, 80]
+    seq_lengths = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4.0]
     # seq_lengths = [10, 11, 12, 13, 14, 15, 16, 17]
     k_max = int(Rot.shape[0] / step_size) - 1
+    idx_diff = [0,0,0,0,0,0,0,0]
     print("k_max : ", k_max)
     for k in range(0, k_max):
         idx_0 = k * step_size
         #print("idx_0 : ", idx_0)
         #print("distances[-1]", distances[-1])
         # import pdb; pdb.set_trace()
+        j = 0
         for seq_length in seq_lengths:
+            j+1
             if seq_length + distances[idx_0] > distances[-1]:
-                print("3333333333")
                 continue
-            print("1111111111111111")
             idx_shift = np.searchsorted(distances[idx_0:], distances[idx_0] + seq_length)
             idx_end = idx_0 + idx_shift
-            print("22222222222222222")
             list_rpe[0].append(idx_0)
             # print("list_rpe[0]", list_rpe[0])
             list_rpe[1].append(idx_end)
             # print("distances : ", distances[idx_0], distances[-1])
-        
+            idx_diff[j] = min(idx_shift, idx_diff[j])
 
-        idxs_0 = list_rpe[0]
-        idxs_end = list_rpe[1]
-        delta_p = Rot[idxs_0].transpose(-1, -2).matmul(
-            ((p[idxs_end] - p[idxs_0]).float()).unsqueeze(-1)).squeeze()
-        list_rpe[2] = delta_p
-        # print("list_rpe : ", list_rpe[0], list_rpe[1], list_rpe[2])
+    idxs_0 = list_rpe[0]
+    idxs_end = list_rpe[1]
+    delta_p = Rot[idxs_0].transpose(-1, -2).matmul(
+        ((p[idxs_end] - p[idxs_0]).float()).unsqueeze(-1)).squeeze()
+    list_rpe[2] = delta_p
+    #print("list_rpe : ", list_rpe[0], list_rpe[1], list_rpe[2])
     return list_rpe
 
 
@@ -127,34 +127,6 @@ def prepare_loss_data(args, dataset):
 
         if set(dataset.datasets_train_filter.keys()) <= set(dataset.list_rpe.keys()): 
             return
-        
-    ##########################################################debugging ############
-    #  # Load the pickle file
-    # import pickle
-    # with open('../temp/delta_p.p', 'rb') as f:
-    #         data = pickle.load(f)
-
-    # if isinstance(data, dict):
-    #     print("Data type: dict")
-    #     print("Data keys: {}".format(list(data.keys())))  # dict의 키들을 출력
-
-    #     # 각 키에 해당하는 값의 앞부분을 출력 (예: 앞의 5개 요소)
-    #     for key, value in data.items():
-    #         print("\nKey: {}".format(key))
-    #         if isinstance(value, list) or isinstance(value, tuple):
-    #             print("First 5 elements of {}: {}".format(key, value[:5]))
-    #         elif isinstance(value, dict):
-    #             print("Keys of {}: {}".format(key, list(value.keys())[:5]))
-    #         elif isinstance(value, (int, float, str)):
-    #             print("Value of {}: {}".format(key, value))
-    #         elif isinstance(value, torch.Tensor):
-    #             print("Tensor shape: {}, First 5 elements: {}".format(value.shape, value[:5]))
-    #         else:
-    #             print("Type: {}, First 5 elements: {}".format(type(value), str(value)[:100])) 
-
-    # else:
-    #     print("Data is of type: {}".format(type(data)))
-    # #######################################################################################
 
     # prepare delta_p_gt
     list_rpe = {}
@@ -210,7 +182,7 @@ def train_loop(args, dataset, epoch, iekf, optimizer, seq_dim):
     for i, (dataset_name, Ns) in enumerate(dataset.datasets_train_filter.items()):
         t, ang_gt, p_gt, v_gt, u, N0 = prepare_data_filter(dataset, dataset_name, Ns,
                                                                   iekf, seq_dim)
-        print("t, ang_gt, p_gt, v_gt, u :", t, ang_gt, p_gt, v_gt, u )
+        #print("t, ang_gt, p_gt, v_gt, u :", t, ang_gt, p_gt, v_gt, u )
         loss = mini_batch_step(dataset, dataset_name, iekf,
                                dataset.list_rpe[dataset_name], t, ang_gt, p_gt, v_gt, u, N0)
         print("loss {} : {} ".format(i, loss))
@@ -248,16 +220,14 @@ def save_iekf(args, iekf):
 
 
 def mini_batch_step(dataset, dataset_name, iekf, list_rpe, t, ang_gt, p_gt, v_gt, u, N0):
-    import pdb; pdb.set_trace()
     iekf.set_Q()
-    import pdb
-    pdb.set_trace()
     measurements_covs = iekf.forward_nets(u)
-    print("111111111111111111")
+    #print("measurements cov : ",measurements_covs)
+    print(len(t), len(u), len(v_gt),len(p_gt),t.shape[0],ang_gt[0])
     Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = iekf.run(t, u,measurements_covs,
                                                             v_gt, p_gt, t.shape[0],
                                                             ang_gt[0])
-    print("111111111111111111")
+    print(len(Rot), len(v), len(p), len(list_rpe[0]),len(list_rpe[1]),len(list_rpe[2]))
     delta_p, delta_p_gt = precompute_lost(Rot, p, list_rpe, N0)
     # print("delta_p, delta_p_gt : ", delta_p[:5], delta_p_gt[:5])
     if delta_p is None:
@@ -308,7 +278,8 @@ def get_start_and_end(seq_dim, u):
         N0 = 0
         N = u.shape[0]
     else: # training sequence
-        N0 = 10 * int(np.random.randint(0, (u.shape[0] - seq_dim)/10))
+        #N0 = 10 * int(np.random.randint(0, (u.shape[0] - seq_dim)/10))
+        N0 = 7 * int(np.random.randint(0, (u.shape[0] - seq_dim)/7))
         N = N0 + seq_dim
     return N0, N
 
@@ -317,22 +288,29 @@ def precompute_lost(Rot, p, list_rpe, N0):
     N = p.shape[0]
     # Rot_10_Hz = Rot[::10]
     # p_10_Hz = p[::10]
-    Rot_10_Hz = Rot[::3]
-    p_10_Hz = p[::3]
-    idxs_0 = torch.Tensor(list_rpe[0]).clone().long() - int(N0 / 10)
-    idxs_end = torch.Tensor(list_rpe[1]).clone().long() - int(N0 / 10)
+    print("N : ", N ,"N0 : ",N0)
+    #idxs_0 = torch.Tensor(list_rpe[0]).clone().long() - int(N0 / 10)
+    #idxs_end = torch.Tensor(list_rpe[1]).clone().long() - int(N0 / 10)
+    Rot_7_Hz = Rot[::4]
+    p_7_Hz = p[::4]
+    idxs_0 = torch.Tensor(list_rpe[0]).clone().long() - int(N0 / 7)
+    idxs_end = torch.Tensor(list_rpe[1]).clone().long() - int(N0 / 7)
     delta_p_gt = list_rpe[2]
-    idxs = torch.Tensor(idxs_0.shape[0]).byte()
-    idxs[:] = 1
-    idxs[idxs_0 < 0] = 0
-    idxs[idxs_end >= int(N / 10)] = 0
+    idxs = torch.ones(idxs_0.shape[0], dtype=torch.bool)
+    #idxs[:] = True
+    print(torch.sum(idxs_0 < 0))
+    print(torch.sum(idxs_end >= int(N/7)))
+    idxs[idxs_0 < 0] = False
+    idxs[idxs_end >= int(N / 7)] = False
+    print("clip length: ", torch.sum(idxs), len(idxs))
     delta_p_gt = delta_p_gt[idxs]
     idxs_end_bis = idxs_end[idxs]
     idxs_0_bis = idxs_0[idxs]
+    print("precompute lost", len(delta_p_gt), len(idxs_end_bis), len(idxs_0_bis))
     if len(idxs_0_bis) is 0: 
         return None, None     
     else:
-        delta_p = Rot_10_Hz[idxs_0_bis].transpose(-1, -2).matmul(
-        (p_10_Hz[idxs_end_bis] - p_10_Hz[idxs_0_bis]).unsqueeze(-1)).squeeze()
+        delta_p = Rot_7_Hz[idxs_0_bis].transpose(-1, -2).matmul(
+        (p_7_Hz[idxs_end_bis] - p_7_Hz[idxs_0_bis]).unsqueeze(-1)).squeeze()
         distance = delta_p_gt.norm(dim=1).unsqueeze(-1)
         return delta_p.double() / distance.double(), delta_p_gt.double() / distance.double() 
