@@ -37,8 +37,8 @@ def launch(args):
 
 class USVParameters(IEKF.Parameters):  # 클래스 이름 변경
     # gravity vector
-    g = np.array([0, 0, -9.80655])
-
+    #g = np.array([0, 0, -9.80655])
+    g = np.array([0, 0, -9.81])
     cov_omega = 2e-4
     cov_acc = 1e-3
     cov_b_omega = 1e-8
@@ -68,8 +68,10 @@ class USVParameters(IEKF.Parameters):  # 클래스 이름 변경
 class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
 
     odometry_benchmark = OrderedDict()
-    odometry_benchmark["merged_output_0830_2"] = [0, 29912]
-
+    odometry_benchmark["merged_output1"] = [0, 25406]
+    odometry_benchmark["merged_output2"] = [0, 25696]
+    odometry_benchmark["merged_output3"] = [0, 25981]
+    
     def __init__(self, args):
         # super(USVDataset, self).__init__(args)
         self.path_data_save = args.path_data_save
@@ -83,9 +85,13 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
         self.datasets_validatation_filter = OrderedDict()
         self.datasets_train_filter = OrderedDict()
 
-        self.sigma_gyro = 1.e-4
-        self.sigma_acc = 1.e-4
-        self.sigma_b_gyro = 1.e-5
+        #self.sigma_gyro = 1.e-4
+        #self.sigma_acc = 1.e-4
+        #self.sigma_b_gyro = 1.e-5
+        #self.sigma_b_acc = 1.e-4
+        self.sigma_gyro = 0.005
+        self.sigma_acc = 0.05
+        self.sigma_b_gyro = 1.e-4
         self.sigma_b_acc = 1.e-4
 
         self.num_data = 0
@@ -93,9 +99,9 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
         self.get_datasets()  
 
         # self.pickle_path = os.path.join(args.path_data_base, 'merged_output.p')
-        self.datasets_train_filter["merged_output_0830_2"] = [0, 20000]
-        # self.datasets_train_filter["merged_output_2"] = [0, 30000]
-        self.datasets_validatation_filter['merged_output_0830_2'] = [20001, 29000]
+        self.datasets_train_filter["merged_output1"] = [0, 25406]
+        self.datasets_train_filter["merged_output2"] = [0, 25696]
+        self.datasets_validatation_filter['merged_output3'] = [0, 25981]
 
         #########################################
         # # Load the pickle file
@@ -114,12 +120,12 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
         poses = []
         packets = []
         for _, row in data.iterrows():
-            packet = namedtuple('OxtsPacket', 'lat, lon, alt, roll, pitch, yaw, vn, ve, vu, ax, ay, az, wx, wy, wz')
+            packet = namedtuple('OxtsPacket', 'time, lat, lon, alt, roll, pitch, yaw, vn, ve, vu, ax, ay, az, wx, wy, wz')
             pose = np.eye(4)  # 4x4 identity matrix as placeholder
             Rot = USVDataset.rotz(row['yaw']).dot(USVDataset.roty(row['pitch'])).dot(USVDataset.rotx(row['roll']))
             pose[:3, :3] = Rot  # Convert roll, pitch, yaw to rotation matrix
             pose[:3, 3] = lla2ned(row['lat'], row['lon'], row['alt'], row['lat'], row['lon'], row['alt'])
-            packets.append(packet(row['lat'], row['lon'], row['alt'], row['roll'], row['pitch'], row['yaw'],
+            packets.append(packet(row['time'],row['lat'], row['lon'], row['alt'], row['roll'], row['pitch'], row['yaw'],
                                   row['vn'], row['ve'], row['vu'], row['ax'], row['ay'], row['az'],
                                   row['wx'], row['wy'], row['wz']))
             poses.append(pose)
@@ -133,90 +139,91 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
 
         :param args: Arguments object containing dataset paths and other configs
         """
-        t_tot = 0
-        # Load data from merged_output.p
-        with open(args.path_data_base + '/merged_output_0830.p', 'rb') as f:
-            data = pickle.load(f)
+        for name in args.name : 
+            # Load data from merged_output.p
+            with open(os.path.join(args.path_data_base,'{}.p'.format(name)), 'rb') as f:
+                data = pickle.load(f)
 
-        oxts = USVDataset.load_oxts_packets_and_poses(data)
+            oxts = USVDataset.load_oxts_packets_and_poses(data)
 
-        # Initialize arrays for storing processed data
-        num_samples = len(oxts)
-        t = np.zeros(num_samples)
-        acc = np.zeros((num_samples, 3))
-        gyro = np.zeros((num_samples, 3))
-        p_gt = np.zeros((num_samples, 3))
-        v_gt = np.zeros((num_samples, 3))
-        ang_gt = np.zeros((num_samples, 3))
+            # Initialize arrays for storing processed data
+            num_samples = len(oxts)
+            t = np.zeros(num_samples)
+            acc = np.zeros((num_samples, 3))
+            gyro = np.zeros((num_samples, 3))
+            p_gt = np.zeros((num_samples, 3))
+            v_gt = np.zeros((num_samples, 3))
+            ang_gt = np.zeros((num_samples, 3))
 
-        k_max = num_samples
-        for k in range(k_max):
-            oxts_k = oxts[k]
-            t[k] = k * 0.01  # Assuming a constant timestep for simplicity; replace with actual timestamp if available
-            p_gt[k, 0] = oxts_k[0].lat  # Position from the pose matrix
-            p_gt[k, 1] = oxts_k[0].lon
-            p_gt[k, 2] = oxts_k[0].alt
-            v_gt[k, 0] = oxts_k[0].ve
-            v_gt[k, 1] = oxts_k[0].vn
-            v_gt[k, 2] = oxts_k[0].vu
-            ang_gt[k, 0] = oxts_k[0].roll
-            ang_gt[k, 1] = oxts_k[0].pitch
-            ang_gt[k, 2] = oxts_k[0].yaw
-            acc[k, :] = [oxts_k[0].ax, oxts_k[0].ay, oxts_k[0].az]
-            gyro[k, :] = [oxts_k[0].wx, oxts_k[0].wy, oxts_k[0].wz]
+            k_max = num_samples
+            for k in range(k_max):
+                oxts_k = oxts[k]
+                # t[k] = k * 0.01  # Assuming a constant timestep for simplicity; replace with actual timestamp if available
+                t[k] = oxts_k[0].time / 1e9
+                p_gt[k, 0] = oxts_k[0].lat  # Position from the pose matrix
+                p_gt[k, 1] = oxts_k[0].lon
+                p_gt[k, 2] = oxts_k[0].alt
+                v_gt[k, 0] = oxts_k[0].ve
+                v_gt[k, 1] = oxts_k[0].vn
+                v_gt[k, 2] = oxts_k[0].vu
+                ang_gt[k, 0] = oxts_k[0].roll
+                ang_gt[k, 1] = oxts_k[0].pitch
+                ang_gt[k, 2] = oxts_k[0].yaw
+                acc[k, :] = [oxts_k[0].ax, oxts_k[0].ay, oxts_k[0].az]
+                gyro[k, :] = [oxts_k[0].wx, oxts_k[0].wy, oxts_k[0].wz]
 
-        # Normalize timestamps
-        t0 = t[0]
-        t = t - t0
+            # Normalize timestamps
+            t0 = t[0]
+            t = t - t0
 
-        u = np.concatenate((gyro, acc), -1)
+            u = np.concatenate((gyro, acc), -1)
 
-        # Convert numpy arrays to PyTorch tensors
-        t = torch.from_numpy(t).float()
-        p_gt = torch.from_numpy(p_gt).float()
-        v_gt = torch.from_numpy(v_gt).float()
-        ang_gt = torch.from_numpy(ang_gt).float()
-        u = torch.from_numpy(u).float()
+            # Convert numpy arrays to PyTorch tensors
+            t = torch.from_numpy(t).float()
+            p_gt = torch.from_numpy(p_gt).float()
+            v_gt = torch.from_numpy(v_gt).float()
+            ang_gt = torch.from_numpy(ang_gt).float()
+            u = torch.from_numpy(u).float()
 
-        mondict = {
-            't': t, 'p_gt': p_gt, 'ang_gt': ang_gt, 'v_gt': v_gt,
-            'u': u, 'name': 'merged_output_0830_2', 't0': t0
-        }
-        USVDataset.dump(mondict, args.path_data_save, 'merged_output_0830_2')
-        # Delete the original merged_output.p file
-        if os.path.exists('../data/merged_output_0830.p'):
-            os.remove('../data/merged_output_0830.p')
-            print("Original merged_output_0830.p file deleted.")
-        else:
-            print("The file does not exist.")
-        
-        #########################################################
-        with open('../data/merged_output_0830_2.p', 'rb') as f:
-            data = pickle.load(f)
-
-        if isinstance(data, dict):
-            print("Data type: dict")
-            print("Data keys: {}".format(list(data.keys())))  # dict의 키들을 출력
-
-            # 각 키에 해당하는 값의 앞부분을 출력 (예: 앞의 5개 요소)
-            for key, value in data.items():
-                print("\nKey: {}".format(key))
-                if isinstance(value, list) or isinstance(value, tuple):
-                    print("First 5 elements of {}: {}".format(key, value[:5]))
-                elif isinstance(value, dict):
-                    print("Keys of {}: {}".format(key, list(value.keys())[:5]))
-                elif isinstance(value, (int, float, str)):
-                    print("Value of {}: {}".format(key, value))
-                elif isinstance(value, torch.Tensor):
-                    print("Tensor shape: {}, First 5 elements: {}".format(value.shape, value[:5]))
-                else:
-                    print("Type: {}, First 5 elements: {}".format(type(value), str(value)[:100])) 
-
-        else:
-            print("Data is of type: {}".format(type(data)))
-        ######################################################################################
+            mondict = {
+                't': t, 'p_gt': p_gt, 'ang_gt': ang_gt, 'v_gt': v_gt,
+                'u': u, 'name': name, 't0': t0
+            }
+            USVDataset.dump(mondict, args.path_data_save, name)
+            # # Delete the original merged_output.p file
+            # if os.path.exists(os.path.join('../data/',"{}.p".format(args.name))):
+            #     os.remove(os.path.join('../data/',"{}.p".format(args.name)))
+            #     print("Original {}.p file deleted.".format(args.name))
+            # else:
+            #     print("The file does not exist.")
             
-        print("\n Total dataset duration : {:.2f} s".format(t[-1] - t[0]))
+            #########################################################
+            with open(os.path.join('../data/',"{}.p".format(name)), 'rb') as f:
+                data = pickle.load(f)
+
+            # if isinstance(data, dict):
+            #     print("Data type: dict")
+            #     print("Data keys: {}".format(list(data.keys())))  # dict의 키들을 출력
+
+            #     # 각 키에 해당하는 값의 앞부분을 출력 (예: 앞의 5개 요소)
+            #     for key, value in data.items():
+            #         print("\nKey: {}".format(key))
+            #         if isinstance(value, list) or isinstance(value, tuple):
+            #             print("First 5 elements of {}: {}".format(key, value[:5]))
+            #         elif isinstance(value, dict):
+            #             print("Keys of {}: {}".format(key, list(value.keys())[:5]))
+            #         elif isinstance(value, (int, float, str)):
+            #             print("Value of {}: {}".format(key, value))
+            #         elif isinstance(value, torch.Tensor):
+            #             print("Tensor shape: {}, First 5 elements: {}".format(value.shape, value[:5]))
+            #         else:
+            #             print("Type: {}, First 5 elements: {}".format(type(value), str(value)[:100])) 
+
+            # else:
+            #     print("Data is of type: {}".format(type(data)))
+            ######################################################################################
+                
+            print("\n Total dataset duration : {:.2f} s".format(t[-1] - t[0]))
 
     def set_normalize_factors(self):
         super().set_normalize_factors()
@@ -242,25 +249,25 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
         s = np.sin(t)
         return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
 
-    @staticmethod
-    def pose_from_oxts_packet(packet, scale):
-        """Helper method to compute a SE(3) pose matrix from an OXTS packet."""
-        er = 6378137.  # earth radius (approx.) in meters
+    # @staticmethod
+    # def pose_from_oxts_packet(packet, scale):
+    #     """Helper method to compute a SE(3) pose matrix from an OXTS packet."""
+    #     er = 6378137.  # earth radius (approx.) in meters
 
-        # Use a Mercator projection to get the translation vector
-        tx = scale * packet.lon * np.pi * er / 180.
-        ty = scale * er * np.log(np.tan((90. + packet.lat) * np.pi / 360.))
-        tz = packet.alt
-        t = np.array([tx, ty, tz])
+    #     # Use a Mercator projection to get the translation vector
+    #     tx = scale * packet.lon * np.pi * er / 180.
+    #     ty = scale * er * np.log(np.tan((90. + packet.lat) * np.pi / 360.))
+    #     tz = packet.alt
+    #     t = np.array([tx, ty, tz])
 
-        # Use the Euler angles to get the rotation matrix
-        Rx = USVDataset.rotx(packet.roll)
-        Ry = USVDataset.roty(packet.pitch)
-        Rz = USVDataset.rotz(packet.yaw)
-        R = Rz.dot(Ry.dot(Rx))
+    #     # Use the Euler angles to get the rotation matrix
+    #     Rx = USVDataset.rotx(packet.roll)
+    #     Ry = USVDataset.roty(packet.pitch)
+    #     Rz = USVDataset.rotz(packet.yaw)
+    #     R = Rz.dot(Ry.dot(Rx))
 
-        # Combine the translation and rotation into a homogeneous transform
-        return R, t
+    #     # Combine the translation and rotation into a homogeneous transform
+    #     return R, t
 
     @staticmethod
     def transform_from_rot_trans(R, t):
@@ -269,17 +276,17 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
         t = t.reshape(3, 1)
         return np.vstack((np.hstack([R, t]), [0, 0, 0, 1]))
 
-    @staticmethod
-    def load_timestamps(data_path):
-        """Load timestamps from file."""
-        timestamp_file = os.path.join(data_path, 'oxts', 'timestamps.txt')
+    # @staticmethod
+    # def load_timestamps(data_path):
+    #     """Load timestamps from file."""
+    #     timestamp_file = os.path.join(data_path, 'oxts', 'timestamps.txt')
 
-        timestamps = []
-        with open(timestamp_file, 'r') as f:
-            for line in f.readlines():
-                t = datetime.datetime.strptime(line[:-4], '%Y-%m-%d %H:%M:%S.%f')
-                timestamps.append(t)
-        return timestamps
+    #     timestamps = []
+    #     with open(timestamp_file, 'r') as f:
+    #         for line in f.readlines():
+    #             t = datetime.datetime.strptime(line[:-4], '%Y-%m-%d %H:%M:%S.%f')
+    #             timestamps.append(t)
+    #     return timestamps
 
 
 def test_filter(args, dataset):
@@ -329,18 +336,18 @@ def test_filter(args, dataset):
 
 
 class USVArgs:  # 클래스 이름 및 경로 수정
-    path_data_base = "/home/sjrhee/sjrhee/ai-imu_0828/ai-imu-dr/data"
+    path_data_base = "/home/wisrl/pjw/ai-imu/dataset/sheco_data"
     path_data_save = "../data"
     path_results = "../results"
     path_temp = "../temp"
-
     epochs = 400
     seq_dim = 6000
 
     # training, cross-validation and test dataset
-    cross_validation_sequences = ['merged_output_0830_2']
-    test_sequences = ['merged_output_0830_2']
-    continue_training = True
+    name = ['merged_output1','merged_output2','merged_output3']
+    cross_validation_sequences = ['merged_output3']
+    test_sequences = ['merged_output3']
+    continue_training = False
 
     # choose what to do
     read_data = 0

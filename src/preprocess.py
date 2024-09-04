@@ -132,6 +132,9 @@ def run(datapath, exp_list) :
             else : 
                 if rec_ekf_idx == 0 :
                     assert False
+                    
+                if from_imu.get(rec_ekf_idx) : 
+                    rec_ekf_idx += 1
                 dt = ekf_time[rec_ekf_idx]-ref_gps_t
                 from_gps[rec_ekf_idx] = [ i, dt]
         from_gps_ = np.array(list(from_gps.values()))
@@ -172,16 +175,22 @@ def run(datapath, exp_list) :
         642 19101 19081 [113484, 3949209] [2884, 1516978]
         843 24973 24975 [148379, 7734231] [3771, 8182595]
         """
-        intersect_ = intersect+1
-        outlier = []
-        for i in intersect_ : 
-            if i not in left :
-                outlier.append(i)
+        # intersect_ = intersect+1
+        # outlier = []
+        # for i in intersect_ : 
+        #     if i not in left :
+        #         outlier.append(i)
                 
-        intersect = np.setdiff1d(intersect, outlier)
+        # intersect = np.setdiff1d(intersect, outlier)
+        
+        outlier = []
         for i in intersect : 
-            tmp = from_gps.pop(i)
-            from_gps[i+1] = tmp
+            if i not in left : 
+                outlier.append(i)
+        
+        # for i in intersect : 
+        #     tmp = from_gps.pop(i)
+        #     from_gps[i+1] = tmp
         
         # outlier
         #pdb.set_trace()
@@ -239,76 +248,77 @@ def run(datapath, exp_list) :
         print("fixed with gps :", num_fix)
         ekf_time = ekf_time[processed_idx[:,0]]
         processed_dt = ekf_time[1:] - ekf_time[:-1]
-        print("processed_dt: ",np.mean(processed_dt), np.std(processed_dt), len(processed_dt))
+        print("processed_dt: ",np.mean(processed_dt), np.std(processed_dt), np.min(processed_dt), np.max(processed_dt),len(processed_dt))
         # fig, ax = plt.subplots()
         # ax.hist(processed_dt, bins=50, density=True, histtype='stepfilled',cumulative=False, color='blue')
         # start, end = ax.get_xlim()
         # ax.xaxis.set_ticks(np.arange(start, end, 1e6))
         # fig.savefig(os.path.join("./plot", "exp{}_dt_fixed.png".format(exp_num)))
     
-        # Extract the relevant fields
-        merged_data = []
-        for i in processed_idx :
-            ekf_timestamp_ns = ekf_df.iloc[i[0],0]
-            ekf_row = ekf_df.iloc[i[1]]
-            imu_row = imu_df.iloc[i[2]]
+        # # Extract the relevant fields
+        # merged_data = []
+        # for i in processed_idx :
+        #     ekf_timestamp_ns = ekf_df.iloc[i[0],0]
+        #     ekf_row = ekf_df.iloc[i[1]]
+        #     imu_row = imu_df.iloc[i[2]]
             
-            merged_row = {
-                '%time': datetime.fromtimestamp(ekf_timestamp_ns / 1e9).isoformat(),
-                'lat': ekf_row['field.pos_x'],
-                'lon': ekf_row['field.pos_y'],
-                'alt': ekf_row['field.pos_z'],
-                'roll': ekf_row['field.ori_r'],
-                'pitch': ekf_row['field.ori_p'],
-                'yaw': ekf_row['field.ori_y'],
-                'vn': ekf_row['field.vel_x'],
-                've': ekf_row['field.vel_y'],
-                'vu': ekf_row['field.vel_z'],
-                'ax': imu_row['field.linear_acceleration.x'],
-                'ay': imu_row['field.linear_acceleration.y'],
-                'az': imu_row['field.linear_acceleration.z'],
-                'af': imu_row['field.linear_acceleration.x'],  # Duplicates as per instruction
-                'al': imu_row['field.linear_acceleration.y'],  # Duplicates as per instruction
-                'au': imu_row['field.linear_acceleration.z'],  # Duplicates as per instruction
-                'wx': imu_row['field.angular_velocity.x'],
-                'wy': imu_row['field.angular_velocity.y'],
-                'wz': imu_row['field.angular_velocity.z'],
-                'wf': imu_row['field.angular_velocity.x'],  # Duplicates as per instruction
-                'wl': imu_row['field.angular_velocity.y'],  # Duplicates as per instruction
-                'wu': imu_row['field.angular_velocity.z'],  # Duplicates as per instruction
-            }
-            #pdb.set_trace()
-            merged_data.append(merged_row)
+        #     merged_row = {
+        #         #'%time': datetime.fromtimestamp(ekf_timestamp_ns / 1e9).isoformat(),
+        #         'time': ekf_timestamp_ns,
+        #         'lat': ekf_row['field.pos_x'],
+        #         'lon': ekf_row['field.pos_y'],
+        #         'alt': ekf_row['field.pos_z'],
+        #         'roll': ekf_row['field.ori_r'],
+        #         'pitch': ekf_row['field.ori_p'],
+        #         'yaw': ekf_row['field.ori_y'],
+        #         'vn': ekf_row['field.vel_x'],
+        #         've': ekf_row['field.vel_y'],
+        #         'vu': ekf_row['field.vel_z'],
+        #         'ax': imu_row['field.linear_acceleration.x'],
+        #         'ay': imu_row['field.linear_acceleration.y'],
+        #         'az': imu_row['field.linear_acceleration.z'],
+        #         'af': imu_row['field.linear_acceleration.x'],  # Duplicates as per instruction
+        #         'al': imu_row['field.linear_acceleration.y'],  # Duplicates as per instruction
+        #         'au': imu_row['field.linear_acceleration.z'],  # Duplicates as per instruction
+        #         'wx': imu_row['field.angular_velocity.x'],
+        #         'wy': imu_row['field.angular_velocity.y'],
+        #         'wz': imu_row['field.angular_velocity.z'],
+        #         'wf': imu_row['field.angular_velocity.x'],  # Duplicates as per instruction
+        #         'wl': imu_row['field.angular_velocity.y'],  # Duplicates as per instruction
+        #         'wu': imu_row['field.angular_velocity.z'],  # Duplicates as per instruction
+        #     }
+        #     #pdb.set_trace()
+        #     merged_data.append(merged_row)
             
             
-        print("merged data: ",len(merged_data))
-        # Convert merged data to a DataFrame with the desired column order
-        column_order = [
-            '%time', 'lat', 'lon', 'alt', 'roll', 'pitch', 'yaw', 
-            'vn', 've', 'vu', 'ax', 'ay', 'az', 'af', 'al', 'au', 
-            'wx', 'wy', 'wz', 'wf', 'wl', 'wu'
-        ]
+        # print("merged data: ",len(merged_data))
+        # # Convert merged data to a DataFrame with the desired column order
+        # column_order = [
+        #     'time', 'lat', 'lon', 'alt', 'roll', 'pitch', 'yaw', 
+        #     'vn', 've', 'vu', 'ax', 'ay', 'az', 'af', 'al', 'au', 
+        #     'wx', 'wy', 'wz', 'wf', 'wl', 'wu'
+        # ]
 
-        merged_df = pd.DataFrame(merged_data, columns=column_order)
+        # merged_df = pd.DataFrame(merged_data, columns=column_order)
 
-        # Save the merged data to a new CSV file
-        merged_df.to_csv(os.path.join(datapath,'merged_output{}.csv'.format(exp_num)), index=False)
+        # # Save the merged data to a new CSV file
+        # merged_df.to_csv(os.path.join(datapath,'merged_output{}.csv'.format(exp_num)), index=False)
 
-        print("Merged CSV file created successfully!")
+        # print("Merged CSV file created successfully!")
 
-        # Save the DataFrame as a pickle file
-        with open(os.path.join(datapath,'merged_output{}.p'.format(exp_num)), 'wb') as f:
-            pickle.dump(merged_df, f)
+        # # Save the DataFrame as a pickle file
+        # with open(os.path.join(datapath,'merged_output{}.p'.format(exp_num)), 'wb') as f:
+        #     pickle.dump(merged_df, f)
 
-        print("Merged CSV file created and saved as a pickle file successfully!")
+        # print("Merged CSV file created and saved as a pickle file successfully!")
 
 
-        # Load the pickle file
-        with open(os.path.join(datapath,'merged_output{}.p'.format(exp_num)), 'rb') as f:
-            loaded_df = pickle.load(f)
+        # # Load the pickle file
+        # with open(os.path.join(datapath,'merged_output{}.p'.format(exp_num)), 'rb') as f:
+        #     loaded_df = pickle.load(f)
 
-        # Display the first few rows
-        print(loaded_df.head())
+        # # Display the first few rows
+        # print(loaded_df.head())
 
 if __name__=="__main__" : 
     data_path = "../dataset/sheco_data"
