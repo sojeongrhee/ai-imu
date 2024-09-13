@@ -49,7 +49,7 @@ def compute_delta_p(Rot, p):
         Notice 2 : 1/10 scale로 하면 학습 loop는 돌아가나 loss가 제대로 나오지 않는 문제가 있음
     """
     # seq_lengths = [10, 20, 30, 40, 50, 60, 70, 80]
-    seq_lengths = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4.0]
+    seq_lengths = [0.1]
     # seq_lengths = [10, 11, 12, 13, 14, 15, 16, 17]
     k_max = int(Rot.shape[0] / step_size) - 1
     idx_diff = [np.inf]*len(seq_lengths)

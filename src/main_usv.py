@@ -190,7 +190,7 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
                 data = pickle.load(f)
                 print("\n Total dataset duration : {:.2f} s, length : {}".format(t[-1] - t[0], len(list(data.items())[0][1])))
                 
-            
+
 
     def set_normalize_factors(self):
         super().set_normalize_factors()
@@ -275,7 +275,7 @@ class USVArgs:  # 클래스 이름 및 경로 수정
     path_results = "../results"
     path_temp = "../temp"
     epochs = 400
-    seq_dim = 28*60 #1680
+    seq_dim = 28*5 #1680
 
     # training, cross-validation and test dataset
     cross_validation_sequences = ['merged_output_processed_1']
