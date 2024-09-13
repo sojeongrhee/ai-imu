@@ -252,12 +252,68 @@ def plot_dist_sc() :
         print(len(list_rpe[0]))
         print(num)
 
+def plot_bias() :
+    data_path = "../dataset/sheco_data"
+    exp_list = [1,2,3]
+    for exp_num in exp_list : 
+        ekf_name = "ekf_ext_rev_{}.csv".format(exp_num)
+        gt_name = "imu{}.bag".format(exp_num)
+        df_gt = pd.read_csv(os.path.join(data_path, gt_name))
+        gt_ = np.array(df_gt.iloc[:,0]).reshape(-1,1)
+        gt_ = gt_ -gt_[0]
+        gt_acc = np.array(df_gt.iloc[:,29:32]).reshape(-1,3)
+        gt_gyr = np.array(df_gt.iloc[:,17:20]).reshape(-1,3)
+        
+        df_ekf = pd.read_csv(os.path.join(data_path, ekf_name))
+       
+        b_acc = np.array(df_ekf.iloc[:,10:13]).reshape(-1,3)
+        b_gyr = np.array(df_ekf.iloc[:,13:16]).reshape(-1,3)
+        t_ = np.array(df_ekf.iloc[:,0]).reshape(-1,1)
+        t_ = t_- t_[0]
+        
+        
+        fig1, ax1 = plt.subplots(3,1,sharex=True,figsize=(20,10))
+        ax1[0].plot(gt_, gt_acc[:,0])
+        ax1[0].plot(t_, b_acc[:,0])        
+        ax1[1].plot(gt_, gt_acc[:,1])
+        ax1[1].plot(t_, b_acc[:,1])
+        ax1[2].plot(gt_, gt_acc[:,2])
+        ax1[2].plot(t_, b_acc[:,2])
+        
+        
+        ax1[0].set(xlabel='time (s)',ylabel=r'$a_x (m/s^2)$',title="x acceleration")
+        ax1[1].set(xlabel='time (s)',ylabel=r'$a_y (m/s^2)$',title="y acceleration")
+        ax1[2].set(xlabel='time (s)',ylabel=r'$a_z (m/s^2)$',title="z acceleration")
+        ax1[0].legend(['measurement', 'bias'])
+        ax1[1].legend(['measurement', 'bias'])
+        ax1[2].legend(['measurement', 'bias'])
+        
+        fig1.savefig(os.path.join("./plot", "exp{}_b_acc.png".format(exp_num)))
+        
+        fig2, ax2 = plt.subplots(3,1,sharex=True,figsize=(20,10))
+        ax2[0].plot(gt_, gt_gyr[:,0])
+        ax2[0].plot(t_, b_gyr[:,0])
+        ax2[1].plot(gt_, gt_gyr[:,1])
+        ax2[1].plot(t_, b_gyr[:,1])
+        ax2[2].plot(gt_, gt_gyr[:,2])
+        ax2[2].plot(t_, b_gyr[:,2])
+       
+        
+        ax2[0].set(xlabel='time (s)',ylabel=r'$w_x (rad/s)$',title="x angular velocity")
+        ax2[1].set(xlabel='time (s)',ylabel=r'$w_y (rad/s)$',title="y angular velocity")
+        ax2[2].set(xlabel='time (s)',ylabel=r'$w_z (rad/s)$',title="z angular velocity")
+        ax2[0].legend(['measurement', 'bias'])
+        ax2[1].legend(['measurement', 'bias'])
+        ax2[2].legend(['measurement', 'bias'])
+        fig2.savefig(os.path.join("./plot", "exp{}_w_acc.png".format(exp_num)))
+        
 if __name__=='__main__' :
     #plot_dt_sc()
-    args = KITTIArgs()
-    dataset = KITTIDataset(args)
+    #args = KITTIArgs()
+    #dataset = KITTIDataset(args)
     #plot_distance(args, dataset)
     #args = USVArgs()
     #dataset = USVDataset(args)
     #print(dataset.datasets)
-    plot_timestamp(args, dataset)
+    #plot_timestamp(args, dataset)
+    plot_bias()

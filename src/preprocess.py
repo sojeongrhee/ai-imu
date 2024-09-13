@@ -7,8 +7,9 @@ import torch
 import os
 import pdb
 from collections import defaultdict
+import json
 
-def run(datapath, exp_list) :
+def run_sample(datapath, exp_list) :
     #choose ref_step to balance number of num[0], num[1]
         
     #train_dict = {1:[[0, 6801],[6801, 9011]], 2: [[0, 2793], [2793, 9145]]}
@@ -22,10 +23,11 @@ def run(datapath, exp_list) :
     split exp2
     0 ~ 2786 (except 2787) / 2789 ~ 9144
     """
-    val_dict = {3: [[0, 9213]]}
     
     imu_offset = {1: 0, 2: 2, 3:0}
-    
+    total = {}
+    total_imu = {}
+    total_gps = {}
     for exp_num in exp_list : 
         # Load GPS and IMU data
         ekf_df = pd.read_csv(os.path.join(datapath,'sample{}.csv'.format(exp_num)))
@@ -59,7 +61,7 @@ def run(datapath, exp_list) :
                     selected_idx= np.argmin(tmp)
                     selected = candidate[selected_idx][0]
                     for k in range(len(candidate)) :
-                        if k != selected_idx : 
+                        if k != selected_idx and b_mask[i]: 
                             missing.append(candidate[k])  
                     candidate = []
                 else : 
@@ -122,8 +124,9 @@ def run(datapath, exp_list) :
         # which gps row is the first gps?
         # when offset is not 0, start from gps
         from_gps = {}
+        #gps_count = []
         if imu_offset[exp_num] > 0 :
-            from_gps[0] = [-1, 0]
+            from_gps[0] = [-1,-1, 0]
         for i in range(len(tmp_b_t)) : 
             ref_gps_t = min(gps_time[tmp_b_t[i]], gps_time[tmp_r_t[i]])
             rec_ekf_idx = np.searchsorted(ekf_time,ref_gps_t)
@@ -136,9 +139,11 @@ def run(datapath, exp_list) :
                 if from_imu.get(rec_ekf_idx) : 
                     rec_ekf_idx += 1
                 dt = ekf_time[rec_ekf_idx]-ref_gps_t
-                from_gps[rec_ekf_idx] = [ i, dt]
+                from_gps[rec_ekf_idx] = [tmp_b_t[i],tmp_r_t[i], dt]
+                #gps_count.append(tmp_b_t[i])
+                #gps_count.append(tmp_r_t[i])
         from_gps_ = np.array(list(from_gps.values()))
-        print("gps statistics: ",np.mean(from_gps_[:,1]),np.std(from_gps_[:,1]))
+        print("gps statistics: ",np.mean(from_gps_[:,2]),np.std(from_gps_[:,2]))
         
         print("missing: ",missing)
         # left ones are also from gps
@@ -197,13 +202,13 @@ def run(datapath, exp_list) :
         if exp_num == 1 : 
         #     # 22574, 22979 from gps
             gps_outlier = [22574, 22979]
-            for i in gps_outlier : 
-                from_gps[i] = [-1, 0]
+            for gps_i, i in enumerate(gps_outlier) : 
+                from_gps[i] = [missing[gps_i][0],-1, 0]
         elif exp_num == 2 : 
         #     # 9247, 12748, 16306, 19081 from gps
             gps_outlier = [9247, 12748, 16306, 19081]
-            for i in gps_outlier : 
-                from_gps[i] = [-1, 0]
+            for gps_i, i in enumerate(gps_outlier) : 
+                from_gps[i] = [missing[gps_i][0],-1, 0]
         #     # 24973 from imu, 24974 from gps, 24975 from imu
             tmp = from_imu[24973]
             dt = ekf_time[24975]-all_imu_t[tmp[0]+7]
@@ -218,7 +223,7 @@ def run(datapath, exp_list) :
         print("[After processing] total ekf :", len(ekf_df), "from_imu :", len(from_imu),"from_gps :", len(from_gps),"left :",len(ekf_df)-len(merged))
         
         #ref_step = 3.57*1e7
-        threshold = 2*np.mean(from_gps_[:,1])
+        threshold = 2*np.mean(from_gps_[:,2])
         
         #threshold = 1*1e6
         print("threshold : ",threshold)
@@ -249,16 +254,27 @@ def run(datapath, exp_list) :
         ekf_time = ekf_time[processed_idx[:,0]]
         processed_dt = ekf_time[1:] - ekf_time[:-1]
         print("processed_dt: ",np.mean(processed_dt), np.std(processed_dt), np.min(processed_dt), np.max(processed_dt),len(processed_dt))
-        fig, ax = plt.subplots()
-        ax.hist(processed_dt, bins=50, density=True, histtype='stepfilled',cumulative=False, color='blue')
-        start, end = ax.get_xlim()
-        ax.xaxis.set_ticks(np.arange(start, end, 1e6))
-        fig.savefig(os.path.join("./plot", "exp{}_dt_fixed.png".format(exp_num)))
-    
+        # fig, ax = plt.subplots()
+        # ax.hist(processed_dt, bins=50, density=True, histtype='stepfilled',cumulative=False, color='blue')
+        # start, end = ax.get_xlim()
+        # ax.xaxis.set_ticks(np.arange(start, end, 1e6))
+        # fig.savefig(os.path.join("./plot", "exp{}_dt_fixed.png".format(exp_num)))
+        total[exp_num] = processed_idx
+        total_gps[exp_num] = from_gps
+        total_imu[exp_num] = from_imu
+    return total, total_gps, total_imu
+
+def merge_ekf_imu(exp_list, processed_dict, datapath) :      
+    ekf_df = pd.read_csv(os.path.join(datapath,'sample{}.csv'.format(exp_num)))
+    imu_df = pd.read_csv(os.path.join(datapath,'imu{}.bag'.format(exp_num))) 
+       
+    for exp_num in exp_list : 
         # Extract the relevant fields
         merged_data = []
+        processed_idx = processed_dict[exp_num]
         for i in processed_idx :
             ekf_timestamp_ns = ekf_df.iloc[i[0],0]
+            if 
             ekf_row = ekf_df.iloc[i[1]]
             imu_row = imu_df.iloc[i[2]]
             
@@ -320,7 +336,26 @@ def run(datapath, exp_list) :
         # Display the first few rows
         print(loaded_df.head())
 
+
+"""
+preprocess rosbag generated ekf sample
+"""
+def run_ekf(data_path, exp_list) : 
+    pass
+    
+
 if __name__=="__main__" : 
     data_path = "../dataset/sheco_data"
     exp_list = [1,2,3]
-    run(data_path, exp_list)
+    total, total_gps, total_imu = run_sample(data_path, exp_list)
+    #merge_ekf_imu(exp_list, total, data_path)
+    #merge_gps_imu(exp_list,total, total_gps,data_path)
+    
+    # for k,v in total_gps.items() : 
+    #     v_ = {}
+    #     for k_tmp,v_tmp in v.items() :
+    #         v_[int(k_tmp)] = [int(i) for i in v_tmp]
+    #     with open("from_gps{}.json".format(k),"w") as json_file : 
+    #         json.dump(v_, json_file)
+    
+    

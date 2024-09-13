@@ -1,0 +1,13 @@
+path_normalize_factor :  ../temp/normalize_factors.p
+Test filter on sequence: merged_output_processed_1
+Execution time: 0.51 s (sequence time: 901.06 s)
+Test filter on sequence: merged_output_processed_2
+Execution time: 0.52 s (sequence time: 914.73 s)
+Test filter on sequence: merged_output_processed_3
+Execution time: 0.53 s (sequence time: 921.15 s)
+
+Results for: merged_output_processed_1
+
+Results for: merged_output_processed_2
+
+Results for: merged_output_processed_3

@@ -53,6 +53,11 @@ class USVParameters(IEKF.Parameters):  # 클래스 이름 변경
     cov_lat = 1
     cov_up = 10
 
+    #1 sec
+    n_normalize_rot = 28
+    #10 sec
+    n_normalize_rot_c_i = 280
+
     def __init__(self, **kwargs):
         super(USVParameters, self).__init__(**kwargs)  # 클래스 이름에 맞게 수정
         self.set_param_attr()
@@ -106,7 +111,7 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
             Rot = USVDataset.rotz(row['yaw']).dot(USVDataset.roty(row['pitch'])).dot(USVDataset.rotx(row['roll']))
             pose[:3, :3] = Rot
             # Convert lat, lon, alt to NED coordinates
-            pose[:3, 3] = lla2ned(row['lat'], row['lon'], row['alt'], row['lat'], row['lon'], row['alt'])
+            #pose[:3, 3] = lla2ned(row['lat'], row['lon'], row['alt'], row['lat'], row['lon'], row['alt'])
             
             # Create the OxtsPacket including the 'time' (formerly '%time')
             packet = OxtsPacket(row['%time'], row['lat'], row['lon'], row['alt'], row['roll'], row['pitch'], row['yaw'],
@@ -183,30 +188,9 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
             #########################################################
             with open(os.path.join(args.path_data_save, data_dir), 'rb') as f:
                 data = pickle.load(f)
-
-                # if isinstance(data, dict):
-                #     print("Data type: dict")
-                #     print("Data keys: {}".format(list(data.keys())))  # dict의 키들을 출력
-
-                #     # 각 키에 해당하는 값의 앞부분을 출력 (예: 앞의 5개 요소)
-                #     for key, value in data.items():
-                #         print("\nKey: {}".format(key))
-                #         if isinstance(value, list) or isinstance(value, tuple):
-                #             print("First 5 elements of {}: {}".format(key, value[:5]))
-                #         elif isinstance(value, dict):
-                #             print("Keys of {}: {}".format(key, list(value.keys())[:5]))
-                #         elif isinstance(value, (int, float, str)):
-                #             print("Value of {}: {}".format(key, value))
-                #         elif isinstance(value, torch.Tensor):
-                #             print("Tensor shape: {}, First 5 elements: {}".format(value.shape, value[:5]))
-                #         else:
-                #             print("Type: {}, First 5 elements: {}".format(type(value), str(value)[:100])) 
-
-                # else:
-                #     print("Data is of type: {}".format(type(data)))
-                ######################################################################################
-                    
                 print("\n Total dataset duration : {:.2f} s, length : {}".format(t[-1] - t[0], len(list(data.items())[0][1])))
+                
+            
 
     def set_normalize_factors(self):
         super().set_normalize_factors()

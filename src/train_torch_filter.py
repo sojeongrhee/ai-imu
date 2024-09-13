@@ -224,12 +224,12 @@ def mini_batch_step(dataset, dataset_name, iekf, list_rpe, t, ang_gt, p_gt, v_gt
     measurements_covs = iekf.forward_nets(u)
     #print("measurements cov : ",measurements_covs)
     print(len(t), len(u), len(v_gt),len(p_gt),t.shape[0],ang_gt[0])
-    Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = iekf.run(t, u,measurements_covs,
+    Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = iekf.run(t, u, measurements_covs,
                                                             v_gt, p_gt, t.shape[0],
                                                             ang_gt[0])
     print(len(Rot), len(v), len(p), len(list_rpe[0]),len(list_rpe[1]),len(list_rpe[2]))
     delta_p, delta_p_gt = precompute_lost(Rot, p, list_rpe, N0)
-    # print("delta_p, delta_p_gt : ", delta_p[:5], delta_p_gt[:5])
+    print("delta_p, delta_p_gt : ", delta_p[:5], delta_p_gt[:5])
     if delta_p is None:
         return -1
     loss = criterion(delta_p, delta_p_gt)

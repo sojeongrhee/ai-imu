@@ -5,3 +5,5 @@ temp/iekfnets.p
 temp/normalize_factors.p
 src/__pycache__
 src/plot
+src/*.txt
+src/utils_inrol_filter.py

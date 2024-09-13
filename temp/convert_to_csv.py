@@ -10,7 +10,7 @@ with open('delta_p.p', 'rb') as f:
 
 # 데이터가 dict 타입인 경우 CSV로 저장
 if isinstance(data, dict):
-    with open('normalize_factors.csv', 'w', newline='') as csvfile:
+    with open('delta_p.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
 
         # 헤더 작성 (dict의 키들)
