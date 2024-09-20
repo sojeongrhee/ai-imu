@@ -47,19 +47,29 @@ def plot_sc(args, dataset) :
     #ax.plot(x_[start:end], y_[start:end],)
     fig.savefig(os.path.join("./plot", "{}_{}.png".format(start, end)))
 
-def plot_timestamp(args, dataset) : 
+def plot_timestamp(folder, name, offset=None) : 
+    if offset is None : 
+        offset = np.zeros(3)
     exp_num = 2
+    start = 9
+    end = 15
     data_path = "../dataset/sheco_data"
     
     imu_name = "imu{}.bag".format(exp_num)
     gps_name = "gt{}.bag".format(exp_num)
-    ekf_name = "sample{}.csv".format(exp_num)
+    ref_name = "sample{}.csv".format(exp_num)
+    ekf_name = "{}{}.csv".format(name,exp_num)
     df_imu = pd.read_csv(os.path.join(data_path, imu_name))
     df_gps = pd.read_csv(os.path.join(data_path, gps_name))
     df_ekf = pd.read_csv(os.path.join(data_path, ekf_name))
+    df_ref = pd.read_csv(os.path.join(data_path, ref_name))
     imu_time = np.array(df_imu.iloc[:,0]).reshape(-1,1)
     gps_time = np.array(df_gps.iloc[:,0]).reshape(-1,1)
-    ekf_time = np.array(df_ekf.iloc[:,0]).reshape(-1,1)
+    ekf_time = np.array(df_ekf.iloc[:,0]).reshape(-1,1) - offset[exp_num-1]
+    ref_time = np.array(df_ref.iloc[:,0]).reshape(-1,1)
+    print(gps_time[:5])
+    print(ekf_time[start:start+5])
+    print(ref_time[:5])
     print(len(imu_time), len(gps_time), len(ekf_time))
     gps_frame = [[1] if frame=='smc_plus' else [2] for frame in df_gps.iloc[:,3]]
     imu_time = np.concatenate((imu_time, [[0]]*len(imu_time), [[-1]]*len(imu_time)),axis=1)
@@ -71,8 +81,6 @@ def plot_timestamp(args, dataset) :
     sorted_list = merged[sorted_indices]
     sorted_list = sorted_list-np.array([sorted_list[0,0],0,0])
     fig1, ax1 = plt.subplots()
-    start = 24972
-    end = 24976
     start_ = np.where(sorted_list[:,2]==start)[0][0]
     end_ = np.where(sorted_list[:,2]==end)[0][0]
     print(start, end)
@@ -80,14 +88,14 @@ def plot_timestamp(args, dataset) :
     ax1.set_yticks([0,1,2,3])
     ax1.set_yticklabels(['imu','gps_2000','gps_plus','ekf'])
     #ax.plot(x_[stat:end], y_[start:end])
-    fig1.savefig(os.path.join("./plot", "{}({})_{}({}).png".format(start,start_,end,end_)))
+    fig1.savefig(os.path.join("./plot/exp{}".format(exp_num),folder, "{}({})_{}({}).png".format(start,start_,end,end_)))
     
     fig2, ax2 = plt.subplots()
     x_ = np.array(df_ekf.iloc[:,1]).reshape(-1,1)
     y_ = np.array(df_ekf.iloc[:,2]).reshape(-1,1)
     ax2.plot(x_[start:end], y_[start:end], marker='x')
     #ax.plot(x_[start:end], y_[start:end],)
-    fig2.savefig(os.path.join("./plot", "{}_{}.png".format(start, end)))
+    fig2.savefig(os.path.join("./plot/exp{}".format(exp_num),folder, "{}_{}.png".format(start, end)))
 
 def compute_dist(Rot, p):
     Rot = Rot[::10]
@@ -306,7 +314,25 @@ def plot_bias() :
         ax2[1].legend(['measurement', 'bias'])
         ax2[2].legend(['measurement', 'bias'])
         fig2.savefig(os.path.join("./plot", "exp{}_w_acc.png".format(exp_num)))
-        
+"""
+- sample : 2, 0, 2
+- output : 19, 13, 13
+- ext : 19, 13, 13
+- ext rev : 19, 13, 12 
+"""
+def calc_offset(off_dict, name) : 
+    exp_list = [1,2,3]
+    data_path = "../dataset/sheco_data"
+    res = []
+    for exp_num in exp_list : 
+        ref_name = "sample{}.csv".format(exp_num)
+        ekf_name = "{}{}.csv".format(name, exp_num)
+        df_ref = pd.read_csv(os.path.join(data_path, ref_name))
+        df_ekf = pd.read_csv(os.path.join(data_path, ekf_name))
+        ref_time = np.array(df_ref.iloc[:,0]).reshape(-1,1)
+        ekf_time = np.array(df_ekf.iloc[:,0]).reshape(-1,1)
+        res.append(ekf_time[off_dict[name][exp_num-1]][0] - ref_time[off_dict["sample"][exp_num-1]][0])
+    return res
 if __name__=='__main__' :
     #plot_dt_sc()
     #args = KITTIArgs()
@@ -315,5 +341,12 @@ if __name__=='__main__' :
     #args = USVArgs()
     #dataset = USVDataset(args)
     #print(dataset.datasets)
-    #plot_timestamp(args, dataset)
-    plot_bias()
+    name = "ekf_output"
+    off_dict_gps = {"sample" : [2,0,2], "ekf_output" : [13,10,13], "ekf_ext_" : [13,13,13], "ekf_ext_rev_" : [13,13,12]} 
+    off_dict_imu = {"sample" : [0,1,0], "ekf_output" : [9,7,9], "ekf_ext_" : [9,7,9], "ekf_ext_rev_" : [9,7,9]}
+    offset = calc_offset(off_dict_gps, name)
+    print(offset)
+    folder_dict = {"sample" : ".", "ekf_output" : "output", "ekf_ext_" : "ext", "ekf_ext_rev_" : "rev"}
+    #[26201680711117849, 26201887724724675, 26202270859414101]
+    plot_timestamp(folder_dict[name], name,offset)
+    #plot_bias()

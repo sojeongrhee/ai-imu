@@ -8,10 +8,10 @@ from utils_torch_filter import TORCHIEKF
 from utils import prepare_data
 import copy
 
-max_loss = 2e1
+max_loss = 2e4
 max_grad_norm = 1e0
 min_lr = 1e-5
-criterion = torch.nn.MSELoss(reduction="sum")
+criterion = torch.nn.MSELoss(reduction="mean")
 lr_initprocesscov_net = 1e-4
 weight_decay_initprocesscov_net = 0e-8
 lr_mesnet = {'cov_net': 1e-4,
@@ -49,10 +49,10 @@ def compute_delta_p(Rot, p):
         Notice 2 : 1/10 scale로 하면 학습 loop는 돌아가나 loss가 제대로 나오지 않는 문제가 있음
     """
     # seq_lengths = [10, 20, 30, 40, 50, 60, 70, 80]
-    seq_lengths = [0.1]
+    seq_lengths = [0.05]
     # seq_lengths = [10, 11, 12, 13, 14, 15, 16, 17]
     k_max = int(Rot.shape[0] / step_size) - 1
-    idx_diff = [np.inf]*len(seq_lengths)
+    idx_diff = [[np.inf,-1]]*len(seq_lengths)
     print("k_max : ", k_max)
     for k in range(0, k_max):
         idx_0 = k * step_size
@@ -65,13 +65,14 @@ def compute_delta_p(Rot, p):
                 continue
             idx_shift = np.searchsorted(distances[idx_0:], distances[idx_0] + seq_length)
             idx_end = idx_0 + idx_shift
+            print("idx_0 : ",idx_0,"idx_end :",idx_end)
             list_rpe[0].append(idx_0)
             # print("list_rpe[0]", list_rpe[0])
             list_rpe[1].append(idx_end)
             # print("distances : ", distances[idx_0], distances[-1])
-            idx_diff[j] = min(idx_shift, idx_diff[j])
+            idx_diff[j] = [min(idx_shift, idx_diff[j][0]), max(idx_shift, idx_diff[j][1])]
             j+=1
-    print(idx_diff)
+    print("idx_diff:",idx_diff)
     idxs_0 = list_rpe[0]
     idxs_end = list_rpe[1]
     delta_p = Rot[idxs_0].transpose(-1, -2).matmul(
@@ -221,15 +222,16 @@ def save_iekf(args, iekf):
 
 def mini_batch_step(dataset, dataset_name, iekf, list_rpe, t, ang_gt, p_gt, v_gt, u, N0):
     iekf.set_Q()
+    #print("u shape:",u.shape)
     measurements_covs = iekf.forward_nets(u)
     #print("measurements cov : ",measurements_covs)
-    print(len(t), len(u), len(v_gt),len(p_gt),t.shape[0],ang_gt[0])
+    #print(len(t), len(u), len(v_gt),len(p_gt),t.shape[0],ang_gt[0])
     Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = iekf.run(t, u, measurements_covs,
                                                             v_gt, p_gt, t.shape[0],
                                                             ang_gt[0])
-    print(len(Rot), len(v), len(p), len(list_rpe[0]),len(list_rpe[1]),len(list_rpe[2]))
+    #print(len(Rot), len(v), len(p), len(list_rpe[0]),len(list_rpe[1]),len(list_rpe[2]))
     delta_p, delta_p_gt = precompute_lost(Rot, p, list_rpe, N0)
-    print("delta_p, delta_p_gt : ", delta_p[:5], delta_p_gt[:5])
+    #print("delta_p, delta_p_gt : ", delta_p[:5], delta_p_gt[:5])
     if delta_p is None:
         return -1
     loss = criterion(delta_p, delta_p_gt)
@@ -301,12 +303,20 @@ def precompute_lost(Rot, p, list_rpe, N0):
     print(torch.sum(idxs_0 < 0))
     print(torch.sum(idxs_end >= int(N/7)))
     idxs[idxs_0 < 0] = False
+    #print(idxs_0)
+    #print(idxs_end)
     idxs[idxs_end >= int(N / 7)] = False
     print("clip length: ", torch.sum(idxs), len(idxs))
     delta_p_gt = delta_p_gt[idxs]
     idxs_end_bis = idxs_end[idxs]
     idxs_0_bis = idxs_0[idxs]
     print("precompute lost", len(delta_p_gt), len(idxs_end_bis), len(idxs_0_bis))
+    # for i in range(len(delta_p_gt)) : 
+    #     print("start :", idxs_0_bis[i],p_7_Hz[idxs_0_bis])
+    #     print("end :",idxs_end_bis[i],p_7_Hz[idxs_end_bis])
+    #     print("diff : ", p_7_Hz[idxs_end_bis] - p_7_Hz[idxs_0_bis], "Rot: ", Rot_7_Hz[idxs_0_bis], "distance :",delta_p_gt.norm(dim=1).unsqueeze(-1))
+    #     print("delta p : ",Rot_7_Hz[idxs_0_bis].transpose(-1, -2).matmul(
+    #     (p_7_Hz[idxs_end_bis] - p_7_Hz[idxs_0_bis]).unsqueeze(-1)).squeeze())
     if len(idxs_0_bis) is 0: 
         return None, None     
     else:

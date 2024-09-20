@@ -265,16 +265,16 @@ def run_sample(datapath, exp_list) :
     return total, total_gps, total_imu
 
 def merge_ekf_imu(exp_list, processed_dict, datapath) :      
-    ekf_df = pd.read_csv(os.path.join(datapath,'sample{}.csv'.format(exp_num)))
-    imu_df = pd.read_csv(os.path.join(datapath,'imu{}.bag'.format(exp_num))) 
+
        
     for exp_num in exp_list : 
+        ekf_df = pd.read_csv(os.path.join(datapath,'sample{}.csv'.format(exp_num)))
+        imu_df = pd.read_csv(os.path.join(datapath,'imu{}.bag'.format(exp_num))) 
         # Extract the relevant fields
         merged_data = []
         processed_idx = processed_dict[exp_num]
         for i in processed_idx :
             ekf_timestamp_ns = ekf_df.iloc[i[0],0]
-            if 
             ekf_row = ekf_df.iloc[i[1]]
             imu_row = imu_df.iloc[i[2]]
             
@@ -336,19 +336,208 @@ def merge_ekf_imu(exp_list, processed_dict, datapath) :
         # Display the first few rows
         print(loaded_df.head())
 
+def merge_final(exp_list, processed_dict, datapath) :      
+       
+    for exp_num in exp_list : 
+        ekf_df = pd.read_csv(os.path.join(datapath,'ekf_final_{}.csv'.format(exp_num)))
+        imu_df = pd.read_csv(os.path.join(datapath,'imu{}.bag'.format(exp_num))) 
+        # Extract the relevant fields
+        merged_data = []
+        processed_idx = processed_dict[exp_num]
+        for i in processed_idx :
+            ekf_timestamp_ns = ekf_df.iloc[i[0],0]
+            ekf_row = ekf_df.iloc[i[1]]
+            imu_row = imu_df.iloc[i[2]]
+            
+            merged_row = {
+                #'%time': datetime.fromtimestamp(ekf_timestamp_ns / 1e9).isoformat(),
+                '%time': ekf_timestamp_ns,
+                'lat': ekf_row['field.pos_x'],
+                'lon': ekf_row['field.pos_y'],
+                'alt': ekf_row['field.pos_z'],
+                'roll': ekf_row['field.ori_r'],
+                'pitch': ekf_row['field.ori_p'],
+                'yaw': ekf_row['field.ori_y'],
+                'vn': ekf_row['field.vel_x'],
+                've': ekf_row['field.vel_y'],
+                'vu': ekf_row['field.vel_z'],
+                'ax': imu_row['field.linear_acceleration.x'],
+                'ay': imu_row['field.linear_acceleration.y'],
+                'az': imu_row['field.linear_acceleration.z'],
+                'af': imu_row['field.linear_acceleration.x'],  # Duplicates as per instruction
+                'al': imu_row['field.linear_acceleration.y'],  # Duplicates as per instruction
+                'au': imu_row['field.linear_acceleration.z'],  # Duplicates as per instruction
+                'wx': imu_row['field.angular_velocity.x'],
+                'wy': imu_row['field.angular_velocity.y'],
+                'wz': imu_row['field.angular_velocity.z'],
+                'wf': imu_row['field.angular_velocity.x'],  # Duplicates as per instruction
+                'wl': imu_row['field.angular_velocity.y'],  # Duplicates as per instruction
+                'wu': imu_row['field.angular_velocity.z'],  # Duplicates as per instruction
+                'bax':ekf_row['field.b_acc_x'],
+                'bay':ekf_row['field.b_acc_y'],
+                'baz':ekf_row['field.b_acc_z'],
+                'bgx':ekf_row['field.b_gyr_x'],
+                'bgy':ekf_row['field.b_gyr_y'],
+                'bgz':ekf_row['field.b_gyr_z'],
+                'cov0':ekf_row['field.cov0'],
+                'cov1':ekf_row['field.cov1'],
+                'cov2':ekf_row['field.cov2'],
+                'cov3':ekf_row['field.cov3'],
+                'cov4':ekf_row['field.cov4'],
+                'cov5':ekf_row['field.cov5'],
+                'cov6':ekf_row['field.cov6'],
+                'cov7':ekf_row['field.cov7'],
+                'cov8':ekf_row['field.cov8'],
+            }
+            #pdb.set_trace()
+            merged_data.append(merged_row)
+            
+            
+        print("merged data: ",len(merged_data))
+        # Convert merged data to a DataFrame with the desired column order
+        column_order = [
+            '%time', 'lat', 'lon', 'alt', 'roll', 'pitch', 'yaw', 
+            'vn', 've', 'vu', 'ax', 'ay', 'az', 'af', 'al', 'au', 
+            'wx', 'wy', 'wz', 'wf', 'wl', 'wu','bax','bay','baz','bgx','bgy','bgz',
+            'cov0', 'cov1', 'cov2', 'cov3', 'cov4', 'cov5', 'cov6', 'cov7', 'cov8'
+        ]
+
+        merged_df = pd.DataFrame(merged_data, columns=column_order)
+
+        # Save the merged data to a new CSV file
+        merged_df.to_csv(os.path.join(datapath,'merged_output_final{}.csv'.format(exp_num)), index=False)
+
+        print("Merged CSV file created successfully!")
+
+        # Save the DataFrame as a pickle file
+        with open(os.path.join(datapath,'merged_output_final{}.p'.format(exp_num)), 'wb') as f:
+            pickle.dump(merged_df, f)
+
+        print("Merged CSV file created and saved as a pickle file successfully!")
+
+
+        # Load the pickle file
+        with open(os.path.join(datapath,'merged_output_final{}.p'.format(exp_num)), 'rb') as f:
+            loaded_df = pickle.load(f)
+
+        # Display the first few rows
+        print(loaded_df.head())
 
 """
 preprocess rosbag generated ekf sample
+1. added bias data
+2. offset for stopped points?
+3. first ekf from gps 
+- output : 13, 13, 13
+- ext : 13, 13, 13
+- ext rev : 13, 13, 12
+4. first ekf from imu (after 0.2s interval)
+- output : 9, 7, 9
+- ext : 9, 7, 9
+- ext rev : 9, 7, 9 
 """
-def run_ekf(data_path, exp_list) : 
-    pass
+def run_ekf(datapath, exp_list, only_imu = False) : 
+    start_seq = {1: [3462, 75407], 2: [13922, 281868], 3:[23490, 470123]}
+    total = {}
+    total_imu = {}
+    total_gps = {}
+    for exp_num in exp_list : 
+        # Load GPS and IMU data
+        ekf_df = pd.read_csv(os.path.join(datapath,'ekf_final_{}.csv'.format(exp_num)))
+        imu_df = pd.read_csv(os.path.join(datapath,'imu{}.bag'.format(exp_num)))
+        gps_df = pd.read_csv(os.path.join(datapath,'gt{}.bag'.format(exp_num)))
+        print("exp: ",exp_num) 
+        
+        #print(len(tmp_b_t), len(tmp_r_t))
+        
+        #2. from ekf sample check it was from gps or imu
+        # Initialize a variable to keep track of the last used GPS index
+        
+        ekf_time = np.array(ekf_df.iloc[:,0])
+        ekf_time = ekf_time[:] - ekf_time[0]
+        #ekf_time is sorted
+        #print(np.all(ekf_time[:-1] <= ekf_time[1:]))
+        
+        
+        # Assume that no imu, gps input is missing
+        
+        # if imu_offset is 0, start from imu -> ekf, else gps -> ekf
+        from_imu = {}
+        from_gps = {}
+        imu_offset= start_seq[exp_num][1]
+        gps_offset= start_seq[exp_num][0]
+        for i in range(len(ekf_df)) : 
+            tmp_seq = ekf_df.loc[i, 'field.seq']
+            #print(tmp_seq)
+            # find index from sequence
+            if tmp_seq < 70000 : 
+                from_gps[i] = tmp_seq - gps_offset
+            else : 
+                from_imu[i] = tmp_seq - imu_offset
+
+        #ref_step = 3.57*1e7
+        threshold = 1.0 * 1e7
+        print("threshold : ",threshold)
+        # for each ekf sample make
+        # [ekf index for time, ekf index for gps, imu index for imu]
+        num_fix = 0
+        processed_idx = []
+        if not only_imu : 
+            for k,v in from_imu.items() : 
+                curr_time = ekf_time[k]
+                dt_prev = 2*threshold
+                dt_next = 2*threshold 
+                if k-1 >= 0 and from_gps.get(k-1) : 
+                    dt_prev = curr_time - ekf_time[k-1]
+                
+                if k+1 < len(ekf_df) and from_gps.get(k+1):
+                    dt_next = ekf_time[k+1] - curr_time
+                #print(dt_prev, dt_next)
+                if dt_prev < threshold : 
+                    processed_idx.append([k, k-1, v])
+                    num_fix += 1
+                elif dt_next < threshold : 
+                    processed_idx.append([k, k+1, v])
+                    num_fix += 1
+                else :  
+                    processed_idx.append([k, k, v])
+        else :
+            for k,v in from_imu.items() : 
+                processed_idx.append([k, k, v])
+
+        processed_idx = np.array(processed_idx)
+        print("fixed with gps :", num_fix)
+        ekf_time = ekf_time[processed_idx[:,0]]
+        print(processed_idx[:,0])
+        processed_dt = ekf_time[28:] - ekf_time[:-28]
+        print("processed_dt: ",np.mean(processed_dt), np.std(processed_dt), np.min(processed_dt), np.max(processed_dt), len(processed_dt))
+
+        #outlier = []
+        #for i, dt_ in enumerate(processed_dt) : 
+        #    if dt_ > 4.5*1e7 or dt_ < 2.5*1e7 : 
+        #        outlier.append(i)
+        #print(len(outlier))
+        argmin = np.argmin(processed_dt)
+        argmax = np.argmax(processed_dt)
+        ekf_time_ = np.array(ekf_df.iloc[:,0])
+        print(ekf_time[argmin+1]+ekf_time_[0],ekf_time[argmin]+ekf_time_[0],ekf_time[argmax+1]+ekf_time_[0],ekf_time[argmax]+ekf_time_[0])
+        fig, ax = plt.subplots()
+        ax.hist(processed_dt, bins=50, density=True, histtype='stepfilled',cumulative=False, color='blue')
+        start, end = ax.get_xlim()
+        ax.xaxis.set_ticks(np.arange(start, end, 1e6))
+        fig.savefig(os.path.join("./plot", "exp{}_dt_final_fixed.png".format(exp_num)))
+        total[exp_num] = processed_idx
+        total_gps[exp_num] = from_gps
+        total_imu[exp_num] = from_imu
+    return total, total_gps, total_imu
+
     
 
 if __name__=="__main__" : 
     data_path = "../dataset/sheco_data"
     exp_list = [1,2,3]
-    total, total_gps, total_imu = run_sample(data_path, exp_list)
-    #merge_ekf_imu(exp_list, total, data_path)
+    total, total_gps, total_imu = run_ekf(data_path, exp_list, False)
+    merge_final(exp_list, total, data_path)
     #merge_gps_imu(exp_list,total, total_gps,data_path)
     
     # for k,v in total_gps.items() : 

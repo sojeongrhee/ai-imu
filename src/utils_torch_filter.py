@@ -254,10 +254,17 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
     def state_and_cov_update(Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P, H, r, R):
         S = H.mm(P).mm(H.t()) + R
         #Kt, _ = torch.gesv(P.mm(H.t()).t(), S)
-        Kt = torch.linalg.lstsq(P.mm(H.t()).t(), S).solution
-        K = Kt
+        #print("H :", H)
+        #print("P :", P)
+        #print("R :", R)
+        #print("A :", S)
+        #print("B :",P.mm(H.t()))
+        Kt = torch.linalg.solve(S,P.mm(H.t()).t())
+        #print("X :",Kt)
+        K = Kt.t()
         dx = K.mv(r.view(-1))
-
+        #print("r :",r)
+        #print("dx :", dx)
         dR, dxi = TORCHIEKF.sen3exp(dx[:9])
         dv = dxi[:, 0]
         dp = dxi[:, 1]
@@ -274,6 +281,8 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
 
         I_KH = TORCHIEKF.IdP - K.mm(H)
         P_upprev = I_KH.mm(P).mm(I_KH.t()) + K.mm(R).mm(K.t())
+        
+        #print("P_upprev :", P_upprev)
         P_up = (P_upprev + P_upprev.t())/2
         return Rot_up, v_up, p_up, b_omega_up, b_acc_up, Rot_c_i_up, t_c_i_up, P_up
 
