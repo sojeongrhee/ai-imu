@@ -1,0 +1,556 @@
+path_normalize_factor :  ../temp/normalize_factors.p
+path_normalize_factor :  ../temp/normalize_factors.p
+dataset_train_filter_items :  odict_items([('merged_output_final_2', [0, 25695]), ('merged_output_final_3', [0, 25980])])
+dp :  tensor([[-0.0317, -0.0030,  0.2908],
+        [-0.4012, -0.4406,  0.1050],
+        [ 0.1482,  0.1519, -0.3281],
+        ...,
+        [ 0.0060,  0.0214, -0.0019],
+        [ 0.0062,  0.0208, -0.0005],
+        [ 0.0060,  0.0215, -0.0006]], device='cuda:0', dtype=torch.float64) p shape:  6424
+k_max :  916
+dp :  tensor([[-2.1154e-01, -1.5086e-01, -1.2640e-01],
+        [-4.5205e-01, -1.8211e-02,  2.5906e-01],
+        [ 3.0901e-01,  5.0855e-02, -1.1500e-01],
+        ...,
+        [ 4.3173e-03,  5.7320e-02,  1.1328e-04],
+        [ 3.4069e-03,  6.0411e-02,  1.2177e-03],
+        [ 3.4060e-03,  6.3647e-02,  2.1518e-03]], device='cuda:0',
+       dtype=torch.float64) p shape:  6495
+k_max :  926
+dp :  tensor([[-0.2247, -0.2141,  0.0031],
+        [-0.3813, -0.1950,  0.3776],
+        [ 0.3924,  0.2336, -0.2278],
+        ...,
+        [-0.0250, -0.0182, -0.0085],
+        [-0.0273, -0.0174, -0.0081],
+        [-0.0301, -0.0167, -0.0078]], device='cuda:0', dtype=torch.float64) p shape:  6352
+k_max :  906
+The IEKF nets are saved in the file ../temp/iekfnets.p
+start time :  1726883713.4705842
+N :  1680 N0 :  15932
+tensor(326, device='cuda:0')
+tensor(556, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 172.77186417330017 
+0 loss: 172.77186
+N :  1680 N0 :  12670
+tensor(259, device='cuda:0')
+tensor(633, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 1109.0350455026112 
+1 loss: 1109.03505
+gradient norm: 1908.29830
+Train Epoch:  1 	Loss: 1281.80691
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 1 epoch: 21s
+
+N :  1680 N0 :  2807
+tensor(58, device='cuda:0')
+tensor(824, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 37.5022318596943 
+0 loss: 37.50223
+N :  1680 N0 :  14938
+tensor(305, device='cuda:0')
+tensor(587, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 588.926433125397 
+1 loss: 588.92643
+gradient norm: 1074.82638
+Train Epoch:  2 	Loss: 626.42866
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 2 epoch: 20s
+
+N :  1680 N0 :  19278
+tensor(394, device='cuda:0')
+tensor(488, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 142.01222695456536 
+0 loss: 142.01223
+N :  1680 N0 :  9464
+tensor(194, device='cuda:0')
+tensor(698, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 131.3697383128821 
+1 loss: 131.36974
+gradient norm: 841.33806
+Train Epoch:  3 	Loss: 273.38197
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 3 epoch: 20s
+
+N :  1680 N0 :  18508
+tensor(378, device='cuda:0')
+tensor(504, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 20.69444226067634 
+0 loss: 20.69444
+N :  1680 N0 :  11886
+tensor(243, device='cuda:0')
+tensor(649, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 301.4313579644815 
+1 loss: 301.43136
+gradient norm: 795.92180
+Train Epoch:  4 	Loss: 322.12580
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 4 epoch: 20s
+
+N :  1680 N0 :  22883
+tensor(467, device='cuda:0')
+tensor(415, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 111.59146596263078 
+0 loss: 111.59147
+N :  1680 N0 :  23219
+tensor(474, device='cuda:0')
+tensor(418, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 121.06213518695799 
+1 loss: 121.06214
+gradient norm: 257.62476
+Train Epoch:  5 	Loss: 232.65360
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 5 epoch: 20s
+
+N :  1680 N0 :  2954
+tensor(61, device='cuda:0')
+tensor(821, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 20.337994745363964 
+0 loss: 20.33799
+N :  1680 N0 :  22092
+tensor(451, device='cuda:0')
+tensor(441, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 361.85683993497815 
+1 loss: 361.85684
+gradient norm: 398.79114
+Train Epoch:  6 	Loss: 382.19483
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 6 epoch: 20s
+
+N :  1680 N0 :  20797
+tensor(425, device='cuda:0')
+tensor(457, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 100.41147528974285 
+0 loss: 100.41148
+N :  1680 N0 :  8183
+tensor(167, device='cuda:0')
+tensor(725, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 361.6812585189675 
+1 loss: 361.68126
+gradient norm: 341.32493
+Train Epoch:  7 	Loss: 462.09273
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 7 epoch: 20s
+
+N :  1680 N0 :  2373
+tensor(49, device='cuda:0')
+tensor(833, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 140.83695062433858 
+0 loss: 140.83695
+N :  1680 N0 :  5691
+tensor(117, device='cuda:0')
+tensor(775, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 68.56167078564205 
+1 loss: 68.56167
+gradient norm: 197.32438
+Train Epoch:  8 	Loss: 209.39862
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 8 epoch: 20s
+
+N :  1680 N0 :  17885
+tensor(365, device='cuda:0')
+tensor(517, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 13.423051181640615 
+0 loss: 13.42305
+N :  1680 N0 :  917
+tensor(19, device='cuda:0')
+tensor(873, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 2950.777064335362 
+1 loss: 2950.77706
+gradient norm: 10013.84473
+Train Epoch:  9 	Loss: 2964.20012
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 9 epoch: 20s
+
+N :  1680 N0 :  15351
+tensor(314, device='cuda:0')
+tensor(568, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 65.78951468561209 
+0 loss: 65.78951
+N :  1680 N0 :  679
+tensor(14, device='cuda:0')
+tensor(878, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 7969.950576475021 
+1 loss: 7969.95058
+gradient norm: 19053.43002
+Train Epoch: 10 	Loss: 8035.74009
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 10 epoch: 20s
+
+N :  1680 N0 :  9492
+tensor(194, device='cuda:0')
+tensor(688, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 20.65272278052043 
+0 loss: 20.65272
+N :  1680 N0 :  5656
+tensor(116, device='cuda:0')
+tensor(776, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 55.48424709695429 
+1 loss: 55.48425
+gradient norm: 302.27138
+Train Epoch: 11 	Loss: 76.13697
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 11 epoch: 20s
+
+N :  1680 N0 :  5313
+tensor(109, device='cuda:0')
+tensor(773, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 51.76585413055803 
+0 loss: 51.76585
+N :  1680 N0 :  23835
+tensor(487, device='cuda:0')
+tensor(405, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 130.24474509796323 
+1 loss: 130.24475
+gradient norm: 221.08717
+Train Epoch: 12 	Loss: 182.01060
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 12 epoch: 20s
+
+N :  1680 N0 :  19460
+tensor(398, device='cuda:0')
+tensor(484, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 128.64192460306182 
+0 loss: 128.64192
+N :  1680 N0 :  11620
+tensor(238, device='cuda:0')
+tensor(654, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 85.09879498781777 
+1 loss: 85.09879
+gradient norm: 969.20327
+Train Epoch: 13 	Loss: 213.74072
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 13 epoch: 20s
+
+N :  1680 N0 :  21077
+tensor(431, device='cuda:0')
+tensor(451, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 185.08948033276195 
+0 loss: 185.08948
+N :  1680 N0 :  4662
+tensor(96, device='cuda:0')
+tensor(796, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 387.61535141886696 
+1 loss: 387.61535
+gradient norm: 619.68933
+Train Epoch: 14 	Loss: 572.70483
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 14 epoch: 20s
+
+N :  1680 N0 :  16849
+tensor(344, device='cuda:0')
+tensor(538, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 47.90255617958102 
+0 loss: 47.90256
+N :  1680 N0 :  4025
+tensor(83, device='cuda:0')
+tensor(809, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 932.0347819693746 
+1 loss: 932.03478
+gradient norm: 1521.13436
+Train Epoch: 15 	Loss: 979.93734
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 15 epoch: 20s
+
+N :  1680 N0 :  784
+tensor(16, device='cuda:0')
+tensor(866, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 54.45981366217828 
+0 loss: 54.45981
+N :  1680 N0 :  3325
+tensor(68, device='cuda:0')
+tensor(824, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 260.1402828410867 
+1 loss: 260.14028
+gradient norm: 618.75592
+Train Epoch: 16 	Loss: 314.60010
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 16 epoch: 20s
+
+N :  1680 N0 :  10703
+tensor(219, device='cuda:0')
+tensor(663, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 57.782592222321625 
+0 loss: 57.78259
+N :  1680 N0 :  23436
+tensor(479, device='cuda:0')
+tensor(413, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 44.52152356457578 
+1 loss: 44.52152
+gradient norm: 135.88760
+Train Epoch: 17 	Loss: 102.30412
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 17 epoch: 20s
+
+N :  1680 N0 :  525
+tensor(11, device='cuda:0')
+tensor(871, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 27.2744279604882 
+0 loss: 27.27443
+N :  1680 N0 :  3920
+tensor(80, device='cuda:0')
+tensor(812, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 287.28863978383527 
+1 loss: 287.28864
+gradient norm: 475.89062
+Train Epoch: 18 	Loss: 314.56307
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 18 epoch: 20s
+
+N :  1680 N0 :  20951
+tensor(428, device='cuda:0')
+tensor(454, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 296.59340704809654 
+0 loss: 296.59341
+N :  1680 N0 :  19208
+tensor(392, device='cuda:0')
+tensor(500, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 47.072969741641515 
+1 loss: 47.07297
+gradient norm: 536.55034
+Train Epoch: 19 	Loss: 343.66638
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 19 epoch: 20s
+
+N :  1680 N0 :  11648
+tensor(238, device='cuda:0')
+tensor(644, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 67.48720479074453 
+0 loss: 67.48720
+N :  1680 N0 :  14966
+tensor(306, device='cuda:0')
+tensor(586, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 930.2452609628638 
+1 loss: 930.24526
+gradient norm: 1522.11526
+Train Epoch: 20 	Loss: 997.73247
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 20 epoch: 20s
+
+N :  1680 N0 :  11074
+tensor(226, device='cuda:0')
+tensor(656, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 80.18165299171433 
+0 loss: 80.18165
+N :  1680 N0 :  5026
+tensor(103, device='cuda:0')
+tensor(789, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 49.3944257349577 
+1 loss: 49.39443
+gradient norm: 392.64988
+Train Epoch: 21 	Loss: 129.57608
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 21 epoch: 16s
+
+N :  1680 N0 :  21763
+tensor(445, device='cuda:0')
+tensor(437, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 103.96615606890343 
+0 loss: 103.96616
+N :  1680 N0 :  21749
+tensor(444, device='cuda:0')
+tensor(448, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 58.145971362506316 
+1 loss: 58.14597
+gradient norm: 153.60944
+Train Epoch: 22 	Loss: 162.11213
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 22 epoch: 10s
+
+N :  1680 N0 :  4816
+tensor(99, device='cuda:0')
+tensor(783, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 66.62632367048076 
+0 loss: 66.62632
+N :  1680 N0 :  23828
+tensor(487, device='cuda:0')
+tensor(405, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 110.98872747607275 
+1 loss: 110.98873
+gradient norm: 183.03553
+Train Epoch: 23 	Loss: 177.61505
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 23 epoch: 10s
+
+N :  1680 N0 :  13209
+tensor(270, device='cuda:0')
+tensor(612, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 31.344257669456535 
+0 loss: 31.34426
+N :  1680 N0 :  21504
+tensor(439, device='cuda:0')
+tensor(453, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 89.06637033624598 
+1 loss: 89.06637
+gradient norm: 610.18115
+Train Epoch: 24 	Loss: 120.41063
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 24 epoch: 10s
+
+N :  1680 N0 :  9513
+tensor(195, device='cuda:0')
+tensor(687, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 11.938997730060319 
+0 loss: 11.93900
+N :  1680 N0 :  8435
+tensor(173, device='cuda:0')
+tensor(719, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 475.65731236834563 
+1 loss: 475.65731
+gradient norm: 747.32908
+Train Epoch: 25 	Loss: 487.59631
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 25 epoch: 13s
+
+N :  1680 N0 :  16947
+tensor(346, device='cuda:0')
+tensor(536, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 25.18390598879642 
+0 loss: 25.18391
+N :  1680 N0 :  17780
+tensor(363, device='cuda:0')
+tensor(529, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 124.17547371255829 
+1 loss: 124.17547
+gradient norm: 127.05329
+Train Epoch: 26 	Loss: 149.35938
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 26 epoch: 15s
+
+N :  1680 N0 :  19733
+tensor(403, device='cuda:0')
+tensor(479, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 112.9321984620842 
+0 loss: 112.93220
+N :  1680 N0 :  8694
+tensor(178, device='cuda:0')
+tensor(714, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 294.0038696617248 
+1 loss: 294.00387
+gradient norm: 615.38220
+Train Epoch: 27 	Loss: 406.93607
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 27 epoch: 19s
+
+N :  1680 N0 :  6552
+tensor(134, device='cuda:0')
+tensor(748, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 916
+precompute lost 34 34 34
+loss 0 : 50.29669209346831 
+0 loss: 50.29669
+N :  1680 N0 :  15547
+tensor(318, device='cuda:0')
+tensor(574, device='cuda:0')
+clip length:  tensor(34, device='cuda:0') 926
+precompute lost 34 34 34
+loss 1 : 115.41697354290072 

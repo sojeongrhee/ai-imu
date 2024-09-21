@@ -9,87 +9,88 @@ from utils import prepare_data
 
 class InitProcessCovNet(torch.nn.Module):
 
-        def __init__(self):
-            super(InitProcessCovNet, self).__init__()
+    def __init__(self):
+        super(InitProcessCovNet, self).__init__()
 
-            self.beta_process = 3*torch.ones(2).double()
-            self.beta_initialization = 3*torch.ones(2).double()
+        self.beta_process = 3*torch.ones(2).double().cuda()  # GPU로 이동
+        self.beta_initialization = 3*torch.ones(2).double().cuda()  # GPU로 이동
 
-            self.factor_initial_covariance = torch.nn.Linear(1, 6, bias=False).double()
-            """parameters for initializing covariance"""
-            self.factor_initial_covariance.weight.data[:] /= 10
+        self.factor_initial_covariance = torch.nn.Linear(1, 6, bias=False).double().cuda()  # GPU로 이동
+        self.factor_initial_covariance.weight.data[:] /= 10
 
-            self.factor_process_covariance = torch.nn.Linear(1, 6, bias=False).double()
-            """parameters for process noise covariance"""
-            self.factor_process_covariance.weight.data[:] /= 10
-            self.tanh = torch.nn.Tanh()
+        self.factor_process_covariance = torch.nn.Linear(1, 6, bias=False).double().cuda()  # GPU로 이동
+        self.factor_process_covariance.weight.data[:] /= 10
 
-        def forward(self, iekf):
-            return
+        self.tanh = torch.nn.Tanh()
 
-        def init_cov(self, iekf):
-            alpha = self.factor_initial_covariance(torch.ones(1).double()).squeeze()
-            beta = 10**(self.tanh(alpha))
-            return beta
+    def forward(self, iekf):
+        return
 
-        def init_processcov(self, iekf):
-            alpha = self.factor_process_covariance(torch.ones(1).double())
-            beta = 10**(self.tanh(alpha))
-            return beta
+    def init_cov(self, iekf):
+        alpha = self.factor_initial_covariance(torch.ones(1).double().cuda()).squeeze()  # GPU로 이동
+        beta = 10**(self.tanh(alpha))
+        return beta
+
+    def init_processcov(self, iekf):
+        alpha = self.factor_process_covariance(torch.ones(1).double().cuda())  # GPU로 이동
+        beta = 10**(self.tanh(alpha))
+        return beta
 
 
 class MesNet(torch.nn.Module):
-        def __init__(self):
-            super(MesNet, self).__init__()
-            self.beta_measurement = 3*torch.ones(2).double()
-            self.tanh = torch.nn.Tanh()
+    def __init__(self):
+        super(MesNet, self).__init__()
+        self.beta_measurement = 3*torch.ones(2).double().cuda()  # GPU로 이동
+        self.tanh = torch.nn.Tanh()
 
-            self.cov_net = torch.nn.Sequential(torch.nn.Conv1d(6, 32, 5),
-                       torch.nn.ReplicationPad1d(4),
-                       torch.nn.ReLU(),
-                       torch.nn.Dropout(p=0.5),
-                       torch.nn.Conv1d(32, 64, 5, dilation=3),
-                       torch.nn.ReplicationPad1d(4),
-                       torch.nn.ReLU(),
-                       torch.nn.Dropout(p=0.5),
-                       torch.nn.Conv1d(64, 128, 7, dilation=5),
-                       torch.nn.ReplicationPad1d(19),
-                       torch.nn.ReLU(),
-                       torch.nn.Dropout(p=0.5),
-                       torch.nn.Conv1d(128, 32, 5, dilation=3),
-                       torch.nn.ReplicationPad1d(4),
-                       torch.nn.ReLU(),
-                       torch.nn.Dropout(p=0.5),
-                       torch.nn.Conv1d(32, 32, 5, dilation=3),
-                       torch.nn.ReplicationPad1d(4),
-                       torch.nn.ReLU(),
-                       torch.nn.Dropout(p=0.5),
-                       ).double()
-            "CNN for measurement covariance"
-            self.cov_lin = torch.nn.Sequential(torch.nn.Linear(32, 2),
-                                              torch.nn.Tanh(),
-                                              ).double()
-            
-            self.cov_lin[0].bias.data[:] /= 100
-            self.cov_lin[0].weight.data[:] /= 100
-            #self.cov_lin = torch.nn.Linear(32, 2).double()
-            #self.cov_lin.bias.data[:] /= 100
-            #self.cov_lin.weight.data[:] /= 100
-            #self.cov_lin_tanh = torch.nn.Tanh().double()
-        def forward(self, u, iekf):
-            y_cov = self.cov_net(u).transpose(0, 2).squeeze()
-            z_cov = self.cov_lin(y_cov)
-            z_cov_net = self.beta_measurement.unsqueeze(0)*z_cov
-            measurements_covs = (iekf.cov0_measurement.unsqueeze(0) * (10**z_cov_net))
-            return measurements_covs
+        self.cov_net = torch.nn.Sequential(
+            torch.nn.Conv1d(6, 32, 5),
+            torch.nn.ReplicationPad1d(4),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(p=0.5),
+            torch.nn.Conv1d(32, 64, 5, dilation=3),
+            torch.nn.ReplicationPad1d(4),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(p=0.5),
+            torch.nn.Conv1d(64, 128, 7, dilation=5),
+            torch.nn.ReplicationPad1d(19),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(p=0.5),
+            torch.nn.Conv1d(128, 32, 5, dilation=3),
+            torch.nn.ReplicationPad1d(4),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(p=0.5),
+            torch.nn.Conv1d(32, 32, 5, dilation=3),
+            torch.nn.ReplicationPad1d(4),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(p=0.5),
+        ).double().cuda()  # GPU로 이동
+
+        self.cov_lin = torch.nn.Sequential(
+            torch.nn.Linear(32, 2),
+            torch.nn.Tanh(),
+        ).double().cuda()  # GPU로 이동
+
+        self.cov_lin[0].bias.data[:] /= 100
+        self.cov_lin[0].weight.data[:] /= 100
+        #self.cov_lin = torch.nn.Linear(32, 2).double()
+        #self.cov_lin.bias.data[:] /= 100
+        #self.cov_lin.weight.data[:] /= 100
+        #self.cov_lin_tanh = torch.nn.Tanh().double()
+    def forward(self, u, iekf):
+        y_cov = self.cov_net(u).transpose(0, 2).squeeze()
+        z_cov = self.cov_lin(y_cov)
+        z_cov_net = self.beta_measurement.unsqueeze(0)*z_cov
+        measurements_covs = (iekf.cov0_measurement.unsqueeze(0) * (10**z_cov_net))
+        return measurements_covs
 
 
 class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
-    Id1 = torch.eye(1).double()
-    Id2 = torch.eye(2).double()
-    Id3 = torch.eye(3).double()
-    Id6 = torch.eye(6).double()
-    IdP = torch.eye(21).double()
+    Id1 = torch.eye(1).double().cuda()
+    Id2 = torch.eye(2).double().cuda()
+    Id3 = torch.eye(3).double().cuda()
+    Id6 = torch.eye(6).double().cuda()
+    IdP = torch.eye(21).double().cuda()
 
     def __init__(self, parameter_class=None):
         torch.nn.Module.__init__(self)
@@ -98,12 +99,12 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         # mean and standard deviation of parameters for normalizing inputs
         self.u_loc = None
         self.u_std = None
-        self.initprocesscov_net = InitProcessCovNet()
-        self.mes_net = MesNet()
+        self.initprocesscov_net = InitProcessCovNet().cuda()
+        self.mes_net = MesNet().cuda()
         self.cov0_measurement = None
 
         # modified parameters
-        self.IdP = torch.eye(self.P_dim).double()
+        self.IdP = torch.eye(self.P_dim).double().cuda()
 
         if parameter_class is not None:
             self.filter_parameters = parameter_class()
@@ -116,17 +117,24 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         for attr in attr_list:
             setattr(self, attr, getattr(self.filter_parameters, attr))
 
-        self.Q = torch.diag(torch.Tensor([self.cov_omega, self.cov_omega, self. cov_omega,
-                                           self.cov_acc, self.cov_acc, self.cov_acc,
-                                           self.cov_b_omega, self.cov_b_omega, self.cov_b_omega,
-                                           self.cov_b_acc, self.cov_b_acc, self.cov_b_acc,
-                                           self.cov_Rot_c_i, self.cov_Rot_c_i, self.cov_Rot_c_i,
-                                           self.cov_t_c_i, self.cov_t_c_i, self.cov_t_c_i])
-                            ).double()
-        self.cov0_measurement = torch.Tensor([self.cov_lat, self.cov_up]).double()
+        self.Q = torch.diag(torch.Tensor([
+            self.cov_omega, self.cov_omega, self.cov_omega,
+            self.cov_acc, self.cov_acc, self.cov_acc,
+            self.cov_b_omega, self.cov_b_omega, self.cov_b_omega,
+            self.cov_b_acc, self.cov_b_acc, self.cov_b_acc,
+            self.cov_Rot_c_i, self.cov_Rot_c_i, self.cov_Rot_c_i,
+            self.cov_t_c_i, self.cov_t_c_i, self.cov_t_c_i
+        ]).double().cuda())
+        self.cov0_measurement = torch.Tensor([self.cov_lat, self.cov_up]).double().cuda()
 
     def run(self, t, u,  measurements_covs, v_mes, p_mes, N, ang0):
 
+        if not isinstance(ang0, torch.Tensor):
+            ang0 = torch.tensor(ang0).double()
+
+        t, u, measurements_covs, v_mes, p_mes, ang0 = (
+            t.cuda(), u.cuda(), measurements_covs.cuda(), v_mes.cuda(), p_mes.cuda(), ang0.cuda()
+        )
         dt = t[1:] - t[:-1]  # (s)
         Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P = self.init_run(dt, u, p_mes, v_mes,
                                        N, ang0)
@@ -139,6 +147,7 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
             Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P = \
                 self.update(Rot_i, v_i, p_i, b_omega_i, b_acc_i, Rot_c_i_i, t_c_i_i, P_i,
                             u[i], i, measurements_covs[i])
+            # print("P : ", P, P.size())
         return Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i
 
     def init_run(self, dt, u, p_mes, v_mes, N, ang0):
@@ -151,7 +160,7 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
 
     def init_covariance(self):
         beta = self.initprocesscov_net.init_cov(self)
-        P = torch.zeros(self.P_dim, self.P_dim).double()
+        P = torch.zeros(self.P_dim, self.P_dim).double().cuda()
         P[:2, :2] = self.cov_Rot0*beta[0]*self.Id2  # no yaw error
         P[3:5, 3:5] = self.cov_v0*beta[1]*self.Id2
         P[9:12, 9:12] = self.cov_b_omega0*beta[2]*self.Id3
@@ -174,31 +183,30 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
 
     def propagate(self, Rot_prev, v_prev, p_prev, b_omega_prev, b_acc_prev, Rot_c_i_prev, t_c_i_prev,
                   P_prev, u, dt):
-        Rot_prev = Rot_prev.clone()
+        Rot_prev = Rot_prev.clone().cuda()
         acc_b = u[3:6] - b_acc_prev
-        acc = Rot_prev.mv(acc_b) + self.g
+        acc = Rot_prev.mv(acc_b) + self.g.cuda()
         v = v_prev + acc * dt
-        p = p_prev + v_prev.clone() * dt + 1/2 * acc * dt**2
+        p = p_prev + v_prev.clone() * dt + 0.5 * acc * dt**2
 
-        omega = (u[:3] - b_omega_prev)*dt
+        omega = (u[:3] - b_omega_prev) * dt
         Rot = Rot_prev.mm(self.so3exp(omega))
 
         b_omega = b_omega_prev
         b_acc = b_acc_prev
-        Rot_c_i = Rot_c_i_prev.clone()
+        Rot_c_i = Rot_c_i_prev.clone().cuda()
         t_c_i = t_c_i_prev
 
-        P = self.propagate_cov(P_prev, Rot_prev, v_prev, p_prev, b_omega_prev, b_acc_prev,
-                               u, dt)
+        P = self.propagate_cov(P_prev, Rot_prev, v_prev, p_prev, b_omega_prev, b_acc_prev, u, dt)
         return Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P
 
     def propagate_cov(self, P, Rot_prev, v_prev, p_prev, b_omega_prev, b_acc_prev, u,
                       dt):
 
-        F = P.new_zeros(self.P_dim, self.P_dim)
-        G = P.new_zeros(self.P_dim, self.Q.shape[0])
-        Q = self.Q.clone()
-        F[3:6, :3] = self.skew(self.g)
+        F = P.new_zeros(self.P_dim, self.P_dim).cuda()
+        G = P.new_zeros(self.P_dim, self.Q.shape[0]).cuda()
+        Q = self.Q.clone().cuda()
+        F[3:6, :3] = self.skew(self.g).cuda()
         F[6:9, 3:6] = self.Id3
         G[3:6, 3:6] = Rot_prev
         F[3:6, 12:15] = -Rot_prev
@@ -219,7 +227,7 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         G = G * dt
         F_square = F.mm(F)
         F_cube = F_square.mm(F)
-        Phi = self.IdP + F + 1/2*F_square + 1/6*F_cube
+        Phi = self.IdP + F + 0.5*F_square + (1/6)*F_cube
         P_new = Phi.mm(P + G.mm(Q).mm(G.t())).mm(Phi.t())
         return P_new
 
@@ -259,9 +267,11 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         #print("R :", R)
         #print("A :", S)
         #print("B :",P.mm(H.t()))
-        Kt = torch.linalg.solve(S,P.mm(H.t()).t())
+        # Kt = torch.linalg.solve(S,P.mm(H.t()).t())
+        Kt = P.mm(H.t()).mm(torch.linalg.inv(S)) 
         #print("X :",Kt)
-        K = Kt.t()
+        # K=Kt.t() 
+        K = Kt
         dx = K.mv(r.view(-1))
         #print("r :",r)
         #print("dx :", dx)
@@ -290,7 +300,8 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
     def skew(x):
         X = torch.Tensor([[0, -x[2], x[1]],
                           [x[2], 0, -x[0]],
-                          [-x[1], x[0], 0]]).double()
+                          [-x[1], x[0], 0]]).double().cuda()
+
         return X
 
     @staticmethod
@@ -314,14 +325,14 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         if isclose(angle, 0.):
             skew_phi = torch.Tensor([[0, -phi[2], phi[1]],
                           [phi[2], 0, -phi[0]],
-                          [-phi[1], phi[0], 0]]).double()
+                          [-phi[1], phi[0], 0]]).double().cuda()
             J = TORCHIEKF.Id3 + 0.5 * skew_phi
             Rot = TORCHIEKF.Id3 + skew_phi
         else:
             axis = phi / angle
             skew_axis = torch.Tensor([[0, -axis[2], axis[1]],
                               [axis[2], 0, -axis[0]],
-                              [-axis[1], axis[0], 0]]).double()
+                              [-axis[1], axis[0], 0]]).double().cuda()
             s = torch.sin(angle)
             c = torch.cos(angle)
 
@@ -341,18 +352,19 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         if isclose(angle, 0.):
             skew_phi = torch.Tensor([[0, -phi[2], phi[1]],
                           [phi[2], 0, -phi[0]],
-                          [-phi[1], phi[0], 0]]).double()
+                          [-phi[1], phi[0], 0]]).double().cuda()
             Xi = TORCHIEKF.Id3 + skew_phi
             return Xi
         axis = phi / angle
         skew_axis = torch.Tensor([[0, -axis[2], axis[1]],
                           [axis[2], 0, -axis[0]],
-                          [-axis[1], axis[0], 0]]).double()
+                          [-axis[1], axis[0], 0]]).double().cuda()
         c = angle.cos()
         s = angle.sin()
         Xi = c * TORCHIEKF.Id3 + (1 - c) * TORCHIEKF.outer(axis, axis) \
              + s * skew_axis
         return Xi
+
 
     @staticmethod
     def outer(a, b):
@@ -367,13 +379,13 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         if isclose(angle, 0.):
             skew_phi = torch.Tensor([[0, -phi[2], phi[1]],
                           [phi[2], 0, -phi[0]],
-                          [-phi[1], phi[0], 0]]).double()
+                          [-phi[1], phi[0], 0]]).double().cuda()
             return TORCHIEKF.Id3 + 0.5 * skew_phi
 
         axis = phi / angle
         skew_axis = torch.Tensor([[0, -axis[2], axis[1]],
                           [axis[2], 0, -axis[0]],
-                          [-axis[1], axis[0], 0]]).double()
+                          [-axis[1], axis[0], 0]]).double().cuda()
         s = torch.sin(angle)
         c = torch.cos(angle)
 
@@ -443,22 +455,22 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
 
         # pytorch SVD seems to be inaccurate, so just move to numpy immediately
         U, _, V = torch.svd(rot)
-        S = torch.eye(3).double()
+        S = torch.eye(3).double().cuda()
         S[2, 2] = torch.det(U) * torch.det(V)
         return U.mm(S).mm(V.t())
 
     def forward_nets(self, u):
-        u_n = self.normalize_u(u).t().unsqueeze(0)
+        u_n = self.normalize_u(u).t().unsqueeze(0).cuda()
         u_n = u_n[:, :6]
         measurements_covs = self.mes_net(u_n, self)
         return measurements_covs
 
     def normalize_u(self, u):
-        return (u-self.u_loc)/self.u_std
+        return (u.cuda() -self.u_loc.cuda())/self.u_std.cuda()
 
     def get_normalize_u(self, dataset):
-        self.u_loc = dataset.normalize_factors['u_loc'].double()
-        self.u_std = dataset.normalize_factors['u_std'].double()
+        self.u_loc = dataset.normalize_factors['u_loc'].double().cuda()
+        self.u_std = dataset.normalize_factors['u_std'].double().cuda()
 
     def set_Q(self):
         """
@@ -472,10 +484,10 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
                                            self.cov_b_acc, self.cov_b_acc, self.cov_b_acc,
                                            self.cov_Rot_c_i, self.cov_Rot_c_i, self.cov_Rot_c_i,
                                            self.cov_t_c_i, self.cov_t_c_i, self.cov_t_c_i])
-                            ).double()
+                            ).double().cuda()
 
         beta = self.initprocesscov_net.init_processcov(self)
-        self.Q = torch.zeros(self.Q.shape[0], self.Q.shape[0]).double()
+        self.Q = torch.zeros(self.Q.shape[0], self.Q.shape[0]).double().cuda()
         self.Q[:3, :3] = self.cov_omega*beta[0]*self.Id3
         self.Q[3:6, 3:6] = self.cov_acc*beta[1]*self.Id3
         self.Q[6:9, 6:9] = self.cov_b_omega*beta[2]*self.Id3
@@ -488,6 +500,7 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         if os.path.isfile(path_iekf):
             mondict = torch.load(path_iekf)
             self.load_state_dict(mondict)
+            self.to('cuda')
             cprint("IEKF nets loaded", 'green')
         else:
             cprint("IEKF nets NOT loaded", 'yellow')
@@ -499,7 +512,7 @@ def isclose(mat1, mat2, tol=1e-10):
 
 
 def prepare_filter(args, dataset):
-    torch_iekf = TORCHIEKF()
+    torch_iekf = TORCHIEKF().cuda()
     torch_iekf.load(args, dataset)
     torch_iekf = TORCHIEKF()
 
@@ -507,7 +520,7 @@ def prepare_filter(args, dataset):
     torch_iekf.filter_parameters = args.parameter_class()
     torch_iekf.set_param_attr()
     if type(torch_iekf.g).__module__ == np.__name__:
-        torch_iekf.g = torch.from_numpy(torch_iekf.g).double()
+        torch_iekf.g = torch.from_numpy(torch_iekf.g).double().cuda()
 
     # load model
     torch_iekf.load(args, dataset)

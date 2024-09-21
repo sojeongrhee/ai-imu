@@ -50,8 +50,8 @@ class USVParameters(IEKF.Parameters):  # 클래스 이름 변경
     cov_b_acc0 = 1e-3
     cov_Rot_c_i0 = 1e-5
     cov_t_c_i0 = 1e-2
-    cov_lat = 1e12
-    cov_up = 1e12
+    cov_lat = 1e-5
+    cov_up = 1
 
     #1 sec
     n_normalize_rot = 7
@@ -293,7 +293,7 @@ def test_filter(args, dataset):
         N = None
         u_t = torch.from_numpy(u).double()
         measurements_covs = torch_iekf.forward_nets(u_t)
-        measurements_covs = measurements_covs.detach().numpy()
+        measurements_covs = measurements_covs.detach().cpu().numpy()
 
         start_time = time.time()
         Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = iekf.run(
@@ -328,7 +328,7 @@ class USVArgs:  # 클래스 이름 및 경로 수정
     continue_training = False
 
     # choose what to do
-    read_data = 1
+    read_data = 0
     train_filter = 1
     test_filter = 0
     results_filter = 0
