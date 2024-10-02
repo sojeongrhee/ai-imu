@@ -8,10 +8,10 @@ from utils_torch_filter import TORCHIEKF
 from utils import prepare_data
 import copy
 
-max_loss = 2e1
+max_loss = 2e4
 max_grad_norm = 1e0
 min_lr = 1e-5
-criterion = torch.nn.MSELoss(reduction="sum")
+criterion = torch.nn.MSELoss(reduction="mean")
 lr_initprocesscov_net = 1e-4
 weight_decay_initprocesscov_net = 0e-8
 lr_mesnet = {'cov_net': 1e-4,
@@ -22,18 +22,19 @@ weight_decay_mesnet = {'cov_net': 1e-8,
     }
 
 
+torch.set_default_tensor_type('torch.cuda.DoubleTensor')
+
 def compute_delta_p(Rot, p):
     list_rpe = [[], [], []]  # [idx_0, idx_end, pose_delta_p]
-
     # sample at 1 Hz
-    # Rot = Rot[::10]
-    # p = p[::10]
-    Rot = Rot[::4]
-    p = p[::4]
+    Rot = Rot[::10]
+    p = p[::10]
+    #Rot = Rot[::4]
+    #p = p[::4]
     #print("Rot, p : ", Rot[0:5], p[0:5])
 
-    # step_size = 10  # every second
-    step_size = 7
+    step_size = 10  # every second
+    #step_size = 7
     distances = np.zeros(p.shape[0])
     dp = p[1:] - p[:-1]  #  this must be ground truth
     print("dp : ", dp, "p shape: ",p.shape[0])
@@ -49,10 +50,10 @@ def compute_delta_p(Rot, p):
         Notice 2 : 1/10 scale로 하면 학습 loop는 돌아가나 loss가 제대로 나오지 않는 문제가 있음
     """
     # seq_lengths = [10, 20, 30, 40, 50, 60, 70, 80]
-    seq_lengths = [0.1]
+    seq_lengths = [0.05, 0.1, 0.15, 0.2]
     # seq_lengths = [10, 11, 12, 13, 14, 15, 16, 17]
     k_max = int(Rot.shape[0] / step_size) - 1
-    idx_diff = [np.inf]*len(seq_lengths)
+    idx_diff = [[np.inf,-1]]*len(seq_lengths)
     print("k_max : ", k_max)
     for k in range(0, k_max):
         idx_0 = k * step_size
@@ -65,13 +66,14 @@ def compute_delta_p(Rot, p):
                 continue
             idx_shift = np.searchsorted(distances[idx_0:], distances[idx_0] + seq_length)
             idx_end = idx_0 + idx_shift
+            #print("idx_0 : ",idx_0,"idx_end :",idx_end)
             list_rpe[0].append(idx_0)
             # print("list_rpe[0]", list_rpe[0])
             list_rpe[1].append(idx_end)
             # print("distances : ", distances[idx_0], distances[-1])
-            idx_diff[j] = min(idx_shift, idx_diff[j])
+            idx_diff[j] = [min(idx_shift, idx_diff[j][0]), max(idx_shift, idx_diff[j][1])]
             j+=1
-    print(idx_diff)
+    print("idx_diff:",idx_diff)
     idxs_0 = list_rpe[0]
     idxs_end = list_rpe[1]
     delta_p = Rot[idxs_0].transpose(-1, -2).matmul(
@@ -102,7 +104,7 @@ def prepare_filter(args, dataset):
     iekf.filter_parameters = args.parameter_class()
     iekf.set_param_attr()
     if type(iekf.g).__module__ == np.__name__:
-        iekf.g = torch.from_numpy(iekf.g).double()
+        iekf.g = torch.from_numpy(iekf.g).double().to('cuda')
 
     # load model
     if args.continue_training:
@@ -121,7 +123,7 @@ def prepare_loss_data(args, dataset):
         mondict = dataset.load(file_delta_p)
         dataset.list_rpe = mondict['list_rpe']
         dataset.list_rpe_validation = mondict['list_rpe_validation']
-        # print("11111111")
+        #print("11111111")
         print("dataset_train_filter_keys : ", dataset.datasets_train_filter.keys())
         print("dataset_list_rpe_keys : ", dataset.list_rpe.keys())
 
@@ -200,7 +202,7 @@ def train_loop(args, dataset, epoch, iekf, optimizer, seq_dim):
     if loss_train == 0: 
         return 
     loss_train.backward()  # loss_train.cuda().backward()  
-    g_norm = torch.nn.utils.clip_grad_norm_(iekf.parameters(), max_grad_norm)
+    g_norm = torch.nn.utils.clip_grad_norm_(iekf.parameters(), max_grad_norm).cpu()
     if np.isnan(g_norm) or g_norm > 3*max_grad_norm:
         cprint("gradient norm: {:.5f}".format(g_norm), 'yellow')
         optimizer.zero_grad()
@@ -221,15 +223,17 @@ def save_iekf(args, iekf):
 
 def mini_batch_step(dataset, dataset_name, iekf, list_rpe, t, ang_gt, p_gt, v_gt, u, N0):
     iekf.set_Q()
+    #print("u shape:",u.shape)
     measurements_covs = iekf.forward_nets(u)
     #print("measurements cov : ",measurements_covs)
-    print(len(t), len(u), len(v_gt),len(p_gt),t.shape[0],ang_gt[0])
+    #print(len(t), len(u), len(v_gt),len(p_gt),t.shape[0],ang_gt[0])
     Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = iekf.run(t, u, measurements_covs,
                                                             v_gt, p_gt, t.shape[0],
                                                             ang_gt[0])
-    print(len(Rot), len(v), len(p), len(list_rpe[0]),len(list_rpe[1]),len(list_rpe[2]))
-    delta_p, delta_p_gt = precompute_lost(Rot, p, list_rpe, N0)
-    print("delta_p, delta_p_gt : ", delta_p[:5], delta_p_gt[:5])
+    #print(len(Rot), len(v), len(p), len(list_rpe[0]),len(list_rpe[1]),len(list_rpe[2]))
+    list_rpe[2] = list_rpe[2].to('cuda')
+    delta_p, delta_p_gt, _, _ = precompute_lost(Rot, p, list_rpe, N0)
+    #print("delta_p, delta_p_gt : ", delta_p[:5], delta_p_gt[:5])
     if delta_p is None:
         return -1
     loss = criterion(delta_p, delta_p_gt)
@@ -260,16 +264,16 @@ def prepare_data_filter(dataset, dataset_name, Ns, iekf, seq_dim):
 
     # subsample data
     N0, N = get_start_and_end(seq_dim, u)
-    t = t[N0: N].double()
-    ang_gt = ang_gt[N0: N].double()
-    p_gt = (p_gt[N0: N] - p_gt[N0]).double()
-    v_gt = v_gt[N0: N].double()
+    t = t[N0: N].double().to('cuda')
+    ang_gt = ang_gt[N0: N].double().to('cuda')
+    p_gt = (p_gt[N0: N] - p_gt[N0]).double().to('cuda')
+    v_gt = v_gt[N0: N].double().to('cuda')
     u = u[N0: N].double()
 
     # add noise
     if iekf.mes_net.training:
         u = dataset.add_noise(u)
-
+    u = u.to('cuda')
     return t, ang_gt, p_gt, v_gt, u, N0
 
 
@@ -278,39 +282,54 @@ def get_start_and_end(seq_dim, u):
         N0 = 0
         N = u.shape[0]
     else: # training sequence
-        #N0 = 10 * int(np.random.randint(0, (u.shape[0] - seq_dim)/10))
-        N0 = 7 * int(np.random.randint(0, (u.shape[0] - seq_dim)/7))
+        N0 = 10 * int(np.random.randint(0, (u.shape[0] - seq_dim)/10))
+        #N0 = 7 * int(np.random.randint(0, (u.shape[0] - seq_dim)/7))
         N = N0 + seq_dim
     return N0, N
 
 
 def precompute_lost(Rot, p, list_rpe, N0):
     N = p.shape[0]
-    # Rot_10_Hz = Rot[::10]
-    # p_10_Hz = p[::10]
+    Rot_10_Hz = Rot[::10]
+    p_10_Hz = p[::10]
     print("N : ", N ,"N0 : ",N0)
     #idxs_0 = torch.Tensor(list_rpe[0]).clone().long() - int(N0 / 10)
     #idxs_end = torch.Tensor(list_rpe[1]).clone().long() - int(N0 / 10)
-    Rot_7_Hz = Rot[::4]
-    p_7_Hz = p[::4]
-    idxs_0 = torch.Tensor(list_rpe[0]).clone().long() - int(N0 / 7)
-    idxs_end = torch.Tensor(list_rpe[1]).clone().long() - int(N0 / 7)
+    #Rot_7_Hz = Rot[::4]
+    #p_7_Hz = p[::4]
+    idxs_0 = torch.Tensor(list_rpe[0]).clone().long() - int(N0 / 10)
+    idxs_end = torch.Tensor(list_rpe[1]).clone().long() - int(N0 / 10)
     delta_p_gt = list_rpe[2]
     idxs = torch.ones(idxs_0.shape[0], dtype=torch.bool)
     #idxs[:] = True
-    print(torch.sum(idxs_0 < 0))
-    print(torch.sum(idxs_end >= int(N/7)))
+    #print(torch.sum(idxs_0 < 0))
+    #print(torch.sum(idxs_end >= int(N/7)))
     idxs[idxs_0 < 0] = False
-    idxs[idxs_end >= int(N / 7)] = False
+    #print(idxs_0)
+    #print(idxs_end)
+    idxs[idxs_end >= int(N / 10)] = False
     print("clip length: ", torch.sum(idxs), len(idxs))
     delta_p_gt = delta_p_gt[idxs]
     idxs_end_bis = idxs_end[idxs]
     idxs_0_bis = idxs_0[idxs]
-    print("precompute lost", len(delta_p_gt), len(idxs_end_bis), len(idxs_0_bis))
+    tmp_true = (idxs == True).nonzero(as_tuple=True)
+    if torch.sum(idxs) > 0 and len(tmp_true[0]) > 0 :
+        print("precompute lost", (tmp_true[0][0]).item(),(tmp_true[0][-1]).item())
+        min_seq = min(idxs_end_bis - idxs_0_bis)
+        max_seq = max(idxs_end_bis - idxs_0_bis)
+        print("min seq : {}, max seq : {}".format(min_seq, max_seq))
+    else : 
+        print("no matching idxs")
+    # for i in range(len(delta_p_gt)) : 
+    #     print("start :", idxs_0_bis[i],p_7_Hz[idxs_0_bis])
+    #     print("end :",idxs_end_bis[i],p_7_Hz[idxs_end_bis])
+    #     print("diff : ", p_7_Hz[idxs_end_bis] - p_7_Hz[idxs_0_bis], "Rot: ", Rot_7_Hz[idxs_0_bis], "distance :",delta_p_gt.norm(dim=1).unsqueeze(-1))
+    #     print("delta p : ",Rot_7_Hz[idxs_0_bis].transpose(-1, -2).matmul(
+    #     (p_7_Hz[idxs_end_bis] - p_7_Hz[idxs_0_bis]).unsqueeze(-1)).squeeze())
     if len(idxs_0_bis) is 0: 
-        return None, None     
+        return None, None, None, None
     else:
-        delta_p = Rot_7_Hz[idxs_0_bis].transpose(-1, -2).matmul(
-        (p_7_Hz[idxs_end_bis] - p_7_Hz[idxs_0_bis]).unsqueeze(-1)).squeeze()
+        delta_p = Rot_10_Hz[idxs_0_bis].transpose(-1, -2).matmul(
+        (p_10_Hz[idxs_end_bis] - p_10_Hz[idxs_0_bis]).unsqueeze(-1)).squeeze()
         distance = delta_p_gt.norm(dim=1).unsqueeze(-1)
-        return delta_p.double() / distance.double(), delta_p_gt.double() / distance.double() 
+        return delta_p.double() / distance.double(), delta_p_gt.double() / distance.double() , min_seq, max_seq

@@ -21,11 +21,10 @@ def results_filter(args, dataset):
 
         Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, measurements_covs = dataset.get_estimates(
             dataset_name)
-
         # get data
         t, ang_gt, p_gt, v_gt, u = dataset.get_data(dataset_name)
         # get data for nets
-        u_normalized = dataset.normalize(u).numpy()
+        u_normalized = dataset.normalize(u).cpu().numpy()
         # shift for better viewing
         u_normalized[:, [0, 3]] += 5
         u_normalized[:, [2, 5]] -= 5
@@ -41,18 +40,18 @@ def results_filter(args, dataset):
         Rot_gt = torch.zeros((Rot.shape[0], 3, 3))
         for j in range(Rot.shape[0]):
             roll, pitch, yaw = TORCHIEKF.to_rpy(torch.from_numpy(Rot[j]))
-            ang[j, 0] = roll.numpy()
-            ang[j, 0] = pitch.numpy()
-            ang[j, 0] = yaw.numpy()
+            ang[j, 0] = roll.cpu().numpy()
+            ang[j, 1] = pitch.cpu().numpy()
+            ang[j, 2] = yaw.cpu().numpy()
         # unwrap
             Rot_gt[j] = TORCHIEKF.from_rpy(torch.Tensor([ang_gt[j, 0]]),
                                         torch.Tensor([ang_gt[j, 1]]),
                                         torch.Tensor([ang_gt[j, 2]]))
             roll, pitch, yaw = TORCHIEKF.to_rpy(Rot_gt[j])
-            ang_gt[j, 0] = roll.numpy()
-            ang_gt[j, 0] = pitch.numpy()
-            ang_gt[j, 0] = yaw.numpy()
-
+            ang_gt[j, 0] = roll.cpu().numpy()
+            ang_gt[j, 1] = pitch.cpu().numpy()
+            ang_gt[j, 2] = yaw.cpu().numpy()
+        Rot_gt = Rot_gt.cpu().float()
         Rot_align, t_align, _ = umeyama_alignment(p_gt[:, :3].T, p[:, :3].T)
         p_align = (Rot_align.T.dot(p[:, :3].T)).T - Rot_align.T.dot(t_align)
         v_norm = np.sqrt(np.sum(v_gt ** 2, 1))

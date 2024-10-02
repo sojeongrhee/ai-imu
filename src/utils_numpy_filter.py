@@ -168,7 +168,7 @@ class NUMPYIEKF:
 
     def propagate(self, Rot_prev, v_prev, p_prev, b_omega_prev, b_acc_prev, Rot_c_i_prev,
                   t_c_i_prev, P_prev, u, dt):
-        acc = Rot_prev.dot(u[3:6] - b_acc_prev) + self.g
+        acc = Rot_prev.dot(u[3:6] - b_acc_prev) - self.g
         v = v_prev + acc * dt
         p = p_prev + v_prev*dt + 1/2 * acc * dt**2
         omega = u[:3] - b_omega_prev
@@ -240,9 +240,12 @@ class NUMPYIEKF:
     @staticmethod
     def state_and_cov_update(Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P, H, r, R):
         S = H.dot(P).dot(H.T) + R
+        #print("P :", P)
+        #print("S :", S)
         K = (np.linalg.solve(S, P.dot(H.T).T)).T
         dx = K.dot(r)
-
+        #print("K :", K)
+        #print("dx : ",dx)
         dR, dxi = NUMPYIEKF.sen3exp(dx[:9])
         dv = dxi[:, 0]
         dp = dxi[:, 1]

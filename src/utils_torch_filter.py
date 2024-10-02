@@ -7,6 +7,7 @@ from termcolor import cprint
 from utils_numpy_filter import NUMPYIEKF
 from utils import prepare_data
 
+torch.set_default_tensor_type('torch.cuda.DoubleTensor')
 class InitProcessCovNet(torch.nn.Module):
 
         def __init__(self):
@@ -254,10 +255,17 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
     def state_and_cov_update(Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P, H, r, R):
         S = H.mm(P).mm(H.t()) + R
         #Kt, _ = torch.gesv(P.mm(H.t()).t(), S)
-        Kt = torch.linalg.lstsq(P.mm(H.t()).t(), S).solution
-        K = Kt
+        #print("H :", H)
+        #print("P :", P)
+        #print("R :", R)
+        #print("A :", S)
+        #print("B :",P.mm(H.t()))
+        Kt = torch.linalg.solve(S,P.mm(H.t()).t())
+        #print("X :",Kt)
+        K = Kt.t()
         dx = K.mv(r.view(-1))
-
+        #print("r :",r)
+        #print("dx :", dx)
         dR, dxi = TORCHIEKF.sen3exp(dx[:9])
         dv = dxi[:, 0]
         dp = dxi[:, 1]
@@ -274,6 +282,8 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
 
         I_KH = TORCHIEKF.IdP - K.mm(H)
         P_upprev = I_KH.mm(P).mm(I_KH.t()) + K.mm(R).mm(K.t())
+        
+        #print("P_upprev :", P_upprev)
         P_up = (P_upprev + P_upprev.t())/2
         return Rot_up, v_up, p_up, b_omega_up, b_acc_up, Rot_c_i_up, t_c_i_up, P_up
 
@@ -327,7 +337,6 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
     @staticmethod
     def so3exp(phi):
         angle = phi.norm()
-
         # Near phi==0, use first order Taylor expansion
         if isclose(angle, 0.):
             skew_phi = torch.Tensor([[0, -phi[2], phi[1]],
@@ -367,7 +376,6 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
                           [-axis[1], axis[0], 0]]).double()
         s = torch.sin(angle)
         c = torch.cos(angle)
-
         return (s / angle) * TORCHIEKF.Id3 + (1 - s / angle) * TORCHIEKF.outer(axis, axis)\
                + ((1 - c) / angle) * skew_axis
 
@@ -448,8 +456,8 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         return (u-self.u_loc)/self.u_std
 
     def get_normalize_u(self, dataset):
-        self.u_loc = dataset.normalize_factors['u_loc'].double()
-        self.u_std = dataset.normalize_factors['u_std'].double()
+        self.u_loc = dataset.normalize_factors['u_loc'].double().to('cuda')
+        self.u_std = dataset.normalize_factors['u_std'].double().to('cuda')
 
     def set_Q(self):
         """

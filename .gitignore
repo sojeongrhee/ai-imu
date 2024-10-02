@@ -6,4 +6,7 @@ temp/normalize_factors.p
 src/__pycache__
 src/plot
 src/*.txt
-src/utils_inrol_filter.py
+src/res.txt
+dataset/sheco_data/merged_output_py_200_final1.csv
+dataset/sheco_data/merged_output_py_200_final2.csv
+dataset/sheco_data/merged_output_py_200_final3.csv

@@ -50,13 +50,13 @@ class USVParameters(IEKF.Parameters):  # 클래스 이름 변경
     cov_b_acc0 = 1e-3
     cov_Rot_c_i0 = 1e-5
     cov_t_c_i0 = 1e-2
-    cov_lat = 1
-    cov_up = 10
+    cov_lat = 1e5
+    cov_up = 1e6
 
     #1 sec
-    n_normalize_rot = 28
+    n_normalize_rot = 100
     #10 sec
-    n_normalize_rot_c_i = 280
+    n_normalize_rot_c_i = 1000
 
     def __init__(self, **kwargs):
         super(USVParameters, self).__init__(**kwargs)  # 클래스 이름에 맞게 수정
@@ -73,9 +73,12 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
 
     # exclude last one
     odometry_benchmark = OrderedDict()
-    odometry_benchmark["merged_output_processed_1"] = [0, 25406]
-    odometry_benchmark["merged_output_processed_2"] = [0, 25696]
-    odometry_benchmark["merged_output_processed_3"] = [0, 25981]
+    #odometry_benchmark["merged_output_processed_1"] = [0, 25406]
+    #odometry_benchmark["merged_output_processed_2"] = [0, 25696]
+    #odometry_benchmark["merged_output_processed_3"] = [0, 25981]
+    odometry_benchmark["merged_output_py_final_1"] = [0, 88923]
+    odometry_benchmark["merged_output_py_final_2"] = [0, 89933]
+    odometry_benchmark["merged_output_py_final_3"] = [0, 90933]
 
     def __init__(self, args):
         super(USVDataset, self).__init__(args)
@@ -85,12 +88,17 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
         self.sigma_b_gyro = 1.e-4
         self.sigma_b_acc = 1.e-4
 
-        self.datasets_train_filter["merged_output_processed_2"] = [0, 25696]
-        self.datasets_train_filter["merged_output_processed_3"] = [0, 25981]
-        self.datasets_validatation_filter['merged_output_processed_1'] = [0, 25406]
+        #self.datasets_train_filter["merged_output_processed_2"] = [0, 25696]
+        #self.datasets_train_filter["merged_output_processed_3"] = [0, 25981]
+        #self.datasets_validatation_filter['merged_output_processed_1'] = [0, 25406]
+
+        self.datasets_train_filter["merged_output_py_final_2"] = [10000, 70000]
+        self.datasets_train_filter["merged_output_py_final_3"] = [30000, 70000]
+        self.datasets_validatation_filter['merged_output_py_final_1'] = [0, 88923]
+        self.add_extra = args.add_extra
 
     @staticmethod
-    def load_oxts_packets_and_poses(data):
+    def load_oxts_packets_and_poses(data, add_extra = False):
         """Converts data from merged_output DataFrame (or dict) to the required format."""
         # Check if data is a dict and convert it to DataFrame
         if isinstance(data, dict):
@@ -102,7 +110,10 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
         packets = []
         
         # Define the packet structure with a valid identifier for time
-        OxtsPacket = namedtuple('OxtsPacket', 'time, lat, lon, alt, roll, pitch, yaw, vn, ve, vu, ax, ay, az, wx, wy, wz')
+        if add_extra : 
+            OxtsPacket = namedtuple('OxtsPacket', 'time, lat, lon, alt, roll, pitch, yaw, vn, ve, vu, ax, ay, az, wx, wy, wz, bax, bay, baz, bgx, bgy, bgz, cov0, cov1, cov2, cov3, cov4, cov5, cov6, cov7, cov8')
+        else : 
+            OxtsPacket = namedtuple('OxtsPacket', 'time, lat, lon, alt, roll, pitch, yaw, vn, ve, vu, ax, ay, az, wx, wy, wz')
 
         for _, row in data.iterrows():
             # Create the pose matrix (4x4 identity matrix)
@@ -114,14 +125,28 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
             #pose[:3, 3] = lla2ned(row['lat'], row['lon'], row['alt'], row['lat'], row['lon'], row['alt'])
             
             # Create the OxtsPacket including the 'time' (formerly '%time')
-            packet = OxtsPacket(row['%time'], row['lat'], row['lon'], row['alt'], row['roll'], row['pitch'], row['yaw'],
-                                row['vn'], row['ve'], row['vu'], row['ax'], row['ay'], row['az'],
-                                row['wx'], row['wy'], row['wz'])
+
+            if add_extra : 
+                packet = OxtsPacket(row['%time'], row['lat'], row['lon'], row['alt'], row['roll'], row['pitch'], row['yaw'],
+                                    row['vn'], row['ve'], row['vu'], row['ax'], row['ay'], row['az'],
+                                    row['wx'], row['wy'], row['wz'], row['bax'], row['bay'], row['baz'], row['bgx'], row['bgy'], row['bgz'],
+                                    row['cov0'],row['cov1'],row['cov2'],row['cov3'],row['cov4'],row['cov5'],row['cov6'],row['cov7'],row['cov8'])
+            else : 
+                packet = OxtsPacket(row['%time'], row['lat'], row['lon'], row['alt'], row['roll'], row['pitch'], row['yaw'],
+                                    row['vn'], row['ve'], row['vu'], row['ax'], row['ay'], row['az'],
+                                    row['wx'], row['wy'], row['wz'])
             
             packets.append(packet)
             poses.append(pose)
         
         return list(zip(packets, poses))
+
+    def get_extra_data(self, i):
+        if self.add_extra : 
+            pickle_dict = self[self.datasets.index(i) if type(i) != int else i]
+            return pickle_dict['u_bias'], pickle_dict['cov_gt']
+        else :
+            return None
 
     @staticmethod
     def read_data(args):
@@ -133,12 +158,13 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
         """
         print("Start read_data")
         data_dirs = os.listdir(args.path_data_base)
+        add_extra = args.add_extra
         for data_dir in data_dirs : 
             name = data_dir[:-2]
             with open(os.path.join(args.path_data_base,data_dir), 'rb') as f:
                 data = pickle.load(f)
 
-            oxts = USVDataset.load_oxts_packets_and_poses(data)
+            oxts = USVDataset.load_oxts_packets_and_poses(data, add_extra)
 
             # Initialize arrays for storing processed data
             num_samples = len(oxts)
@@ -148,6 +174,9 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
             p_gt = np.zeros((num_samples, 3))
             v_gt = np.zeros((num_samples, 3))
             ang_gt = np.zeros((num_samples, 3))
+            a_bias = np.zeros((num_samples,3))
+            gyro_bias = np.zeros((num_samples,3))
+            cov_gt = np.zeros((num_samples, 9))
 
             k_max = num_samples
             for k in range(k_max):
@@ -166,23 +195,37 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
                 acc[k, :] = [oxts_k[0].ax, oxts_k[0].ay, oxts_k[0].az]
                 gyro[k, :] = [oxts_k[0].wx, oxts_k[0].wy, oxts_k[0].wz]
 
+                if add_extra : 
+                    a_bias[k, :] = [oxts_k[0].bax, oxts_k[0].bay, oxts_k[0].baz]
+                    gyro_bias[k, :] = [oxts_k[0].bgx, oxts_k[0].bgy, oxts_k[0].bgz]
+                    cov_gt[k, :] = [oxts_k[0].cov0, oxts_k[0].cov1, oxts_k[0].cov2, \
+                                    oxts_k[0].cov3, oxts_k[0].cov4, oxts_k[0].cov5, \
+                                    oxts_k[0].cov6, oxts_k[0].cov7, oxts_k[0].cov8 ]
+                    
             # Normalize timestamps
             t0 = t[0]
             t = t - t0
 
             u = np.concatenate((gyro, acc), -1)
-
             # Convert numpy arrays to PyTorch tensors
             t = torch.from_numpy(t).float()
             p_gt = torch.from_numpy(p_gt).float()
             v_gt = torch.from_numpy(v_gt).float()
             ang_gt = torch.from_numpy(ang_gt).float()
             u = torch.from_numpy(u).float()
-
-            mondict = {
-                't': t, 'p_gt': p_gt, 'ang_gt': ang_gt, 'v_gt': v_gt,
-                'u': u, 'name': name, 't0': t0
-            }
+            if add_extra  : 
+                u_bias = np.concatenate((a_bias, gyro_bias), -1)
+                u_bias = torch.from_numpy(u_bias).float()
+                cov_gt = torch.from_numpy(cov_gt).float()
+                mondict = {
+                    't': t, 'p_gt': p_gt, 'ang_gt': ang_gt, 'v_gt': v_gt,
+                    'u': u, 'name': name, 't0': t0, 'u_bias':u_bias, 'cov_gt':cov_gt
+                }
+            else : 
+                mondict = {
+                    't': t, 'p_gt': p_gt, 'ang_gt': ang_gt, 'v_gt': v_gt,
+                    'u': u, 'name': name, 't0': t0
+                }
             USVDataset.dump(mondict, args.path_data_save, name)
             
             #########################################################
@@ -248,9 +291,9 @@ def test_filter(args, dataset):
         t, ang_gt, p_gt, v_gt, u = prepare_data(args, dataset, dataset_name, i, to_numpy=True)
 
         N = None
-        u_t = torch.from_numpy(u).double()
+        u_t = torch.from_numpy(u).double().to('cuda')
         measurements_covs = torch_iekf.forward_nets(u_t)
-        measurements_covs = measurements_covs.detach().numpy()
+        measurements_covs = measurements_covs.detach().cpu().numpy()
 
         start_time = time.time()
         Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = iekf.run(
@@ -259,27 +302,28 @@ def test_filter(args, dataset):
         diff_time = time.time() - start_time
 
         print("Execution time: {:.2f} s (sequence time: {:.2f} s)".format(diff_time, t[-1] - t[0]))
-
         # 결과 저장
         mondict = {
-            't': t, 'Rot': Rot, 'v': v, 'p': p, 'b_omega': b_omega, 'b_acc': b_acc,
-            'Rot_c_i': Rot_c_i, 't_c_i': t_c_i,
+            't': t, 'Rot': Rot, 'v': v, 'p': p, 'b_omega': b_omega, \
+            'b_acc': b_acc,'Rot_c_i': Rot_c_i, 't_c_i': t_c_i,
             'measurements_covs': measurements_covs,
         }
         dataset.dump(mondict, args.path_results, dataset_name + "_filter.p")
 
 
 class USVArgs:  # 클래스 이름 및 경로 수정
-    path_data_base = "../dataset/sheco_data/ekf_data"
+    path_data_base = "../dataset/sheco_data/py_data"
     path_data_save = "../dataset/merged_output"
     path_results = "../results"
     path_temp = "../temp"
-    epochs = 400
-    seq_dim = 28*5 #1680
+    epochs = 40000
+    seq_dim = 100*5
 
     # training, cross-validation and test dataset
-    cross_validation_sequences = ['merged_output_processed_1']
-    test_sequences = ['merged_output_processed_1']
+    # cross_validation_sequences = ['merged_output_processed_1']
+    # test_sequences = ['merged_output_processed_1']
+    cross_validation_sequences = ['merged_output_py_final_1']
+    test_sequences = ['merged_output_py_final_1']
     continue_training = False
 
     # choose what to do
@@ -290,8 +334,12 @@ class USVArgs:  # 클래스 이름 및 경로 수정
     dataset_class = USVDataset
     parameter_class = USVParameters  # 클래스 이름에 맞게 수정
 
+    # include bias, covariance  
+    add_extra = False
 
 if __name__ == '__main__':
+    #torch.set_default_device('cuda') 
+    torch.set_default_tensor_type('torch.cuda.DoubleTensor')
     args = USVArgs()  # USVArgs의 인스턴스 생성
     dataset = USVDataset(args)  # dataset 인스턴스 생성
     launch(args)  # 'args' 객체를 전달
