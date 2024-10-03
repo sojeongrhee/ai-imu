@@ -10,3 +10,4 @@ src/res.txt
 dataset/sheco_data/merged_output_py_200_final1.csv
 dataset/sheco_data/merged_output_py_200_final2.csv
 dataset/sheco_data/merged_output_py_200_final3.csv
+src/wandb
