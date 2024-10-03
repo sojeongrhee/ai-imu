@@ -253,7 +253,7 @@ def compare_filter(args, dataset):
     for i in range(0, len(dataset.datasets)):
         plt.close('all')
         dataset_name = dataset.dataset_name(i)
-        if dataset_name not in ["merged_output_final_1","merged_output_final_2","merged_output_final_3"] : 
+        if dataset_name not in ["merged_output_py_final_1","merged_output_py_final_2","merged_output_py_final_3"] : 
             continue
         prop_name = os.path.join(dataset.path_results, dataset_name + "_prop.p")
         filter_name = os.path.join(dataset.path_results, dataset_name + "_filter.p")
@@ -292,25 +292,25 @@ def compare_filter(args, dataset):
         ang = np.zeros((Rot.shape[0], 3))
         ang_b = np.zeros((Rot.shape[0], 3))
 
-        Rot_gt = torch.zeros((Rot.shape[0], 3, 3))
+        Rot_gt = torch.zeros((Rot.shape[0], 3, 3)).float().cpu()
         for j in range(Rot.shape[0]):
             roll, pitch, yaw = TORCHIEKF.to_rpy(torch.from_numpy(Rot[j]))
-            ang[j, 0] = roll.numpy()
-            ang[j, 1] = pitch.numpy()
-            ang[j, 2] = yaw.numpy()
+            ang[j, 0] = roll.cpu().numpy()
+            ang[j, 1] = pitch.cpu().numpy()
+            ang[j, 2] = yaw.cpu().numpy()
 
             roll, pitch, yaw = TORCHIEKF.to_rpy(torch.from_numpy(Rot_b[j]))
-            ang_b[j, 0] = roll.numpy()
-            ang_b[j, 1] = pitch.numpy()
-            ang_b[j, 2] = yaw.numpy()
+            ang_b[j, 0] = roll.cpu().numpy()
+            ang_b[j, 1] = pitch.cpu().numpy()
+            ang_b[j, 2] = yaw.cpu().numpy()
         # unwrap
             Rot_gt[j] = TORCHIEKF.from_rpy(torch.Tensor([ang_gt[j, 0]]),
                                         torch.Tensor([ang_gt[j, 1]]),
                                         torch.Tensor([ang_gt[j, 2]]))
             roll, pitch, yaw = TORCHIEKF.to_rpy(Rot_gt[j])
-            ang_gt[j, 0] = roll.numpy()
-            ang_gt[j, 1] = pitch.numpy()
-            ang_gt[j, 2] = yaw.numpy()
+            ang_gt[j, 0] = roll.cpu().numpy()
+            ang_gt[j, 1] = pitch.cpu().numpy()
+            ang_gt[j, 2] = yaw.cpu().numpy()
 
         #Rot_align, t_align, _ = umeyama_alignment(p_gt[:, :3].T, p[:, :3].T)
         #p_align = (Rot_align.T.dot(p[:, :3].T)).T - Rot_align.T.dot(t_align)
@@ -502,7 +502,7 @@ def run_filter(args, dataset) :
         #measurements_covs = torch_iekf.forward_nets(u_t)
         #measurements_covs = measurements_covs.detach().numpy()
         #measurements_covs = np.array([[iekf.cov_lat, iekf.cov_up]]*len(u))
-        measurements_covs = np.array([[1e12,1e12]]*len(u))
+        measurements_covs = np.array([[1e5,1e6]]*len(u))
         #print(measurements_covs)
         
         
@@ -523,12 +523,15 @@ def run_filter(args, dataset) :
             #b_omega[0] = u_bias[0,3:6]
             #b_acc[0] = u_bias[0,:3]
             #b_acc[0] = -2 * iekf.g
+        else : 
+            u_bias = np.zeros((N,6))
+            u_bias[0, :3] = -2 * iekf.g
 
         Rot_b, v_b, p_b, b_omega_b, b_acc_b, Rot_c_i_b, t_c_i_b = iekf.init_saved_state(dt, N, ang_gt[0])
         # Rot_b[0] = iekf.from_rpy(ang_gt[0,0], ang_gt[0,1], ang_gt[0,2])
         # v_b[0] = v_gt[0]
 
-        interval = 28
+        interval = 100
         start_index = np.arange(0, N, interval)
         start_index = np.concatenate((start_index, [N]))
         #start_index = np.array([0,N])
@@ -632,7 +635,7 @@ def plot_iekf_loss(args, dataset) :
             # add noise
             #u = dataset.add_noise(u)
             iekf.set_Q()
-            measurements_covs = torch.Tensor([[1e5, 1e6]]*len(u)).double().to('cuda')
+            measurements_covs = torch.Tensor([[1, 2]]*len(u)).double().to('cuda')
             Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = iekf.run(t_, u_, measurements_covs,
                                                         v_gt_, p_gt_, t_.shape[0],
                                                         ang_gt_[0])
@@ -667,7 +670,73 @@ def plot_iekf_loss(args, dataset) :
         ax2.plot(loss_tmp[:,0], loss_tmp[:,3])
         fig2.savefig(os.path.join(folder_path, "length_per_loss.png"))
             
-    
+def plot_iekf_result(args, dataset) : 
+    iekf = TORCHIEKF()
+    criterion = torch.nn.MSELoss(reduction="mean")
+    iekf.filter_parameters = USVParameters()  
+    iekf.set_param_attr()
+    loss_res = []
+    for i, (dataset_name, Ns) in enumerate(dataset.datasets_train_filter.items()):
+        #if dataset_name not in ["merged_output_final_2","merged_output_final_3"] : 
+        #    continue
+        if dataset_name not in ["merged_output_py_final_2"] : 
+            continue
+        seq_dim = args.seq_dim
+        # get data with trainable instant
+        # t, ang_gt, p_gt, v_gt, u, N0 = prepare_data_filter(dataset, dataset_name, Ns,
+        #                                                         iekf, seq_dim)
+        t, ang_gt, p_gt, v_gt,  u = dataset.get_data(dataset_name)
+        t = t[Ns[0]: Ns[1]]
+        ang_gt = ang_gt[Ns[0]: Ns[1]]
+        p_gt = (p_gt[Ns[0]: Ns[1]] - p_gt[Ns[0]])
+        v_gt = v_gt[Ns[0]: Ns[1]]
+        u = u[Ns[0]: Ns[1]]
+        prepare_loss_data(args, dataset)
+        iekf.g = torch.Tensor(iekf.g).double().to('cuda')
+        
+        list_rpe = dataset.list_rpe[dataset_name]
+        list_rpe[2] = list_rpe[2].to('cuda')
+        interval = 2500
+        loss_tmp = []
+        Ns_ = [41200, 43701]
+        for start_idx in range(Ns_[0]-Ns[0], Ns_[1]-Ns[0]-interval, interval) :
+            print("start", start_idx)
+            N0 = start_idx 
+            N = N0 + interval
+            t_ = t[N0: N].double().to('cuda')
+            ang_gt_ = ang_gt[N0: N].double().to('cuda')
+            p_gt_ = (p_gt[N0: N] - p_gt[N0]).double().to('cuda')
+            v_gt_ = v_gt[N0: N].double().to('cuda')
+            u_ = u[N0: N].double().to('cuda')
+            # add noise
+            #u = dataset.add_noise(u)
+            iekf.set_Q()
+            measurements_covs = torch.Tensor([[1e6, 1e3]]*len(u)).double().to('cuda')
+            Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = iekf.run(t_, u_, measurements_covs,
+                                                        v_gt_, p_gt_, t_.shape[0],
+                                                        ang_gt_[0])
+            
+        
+            #print("t, ang_gt, p_gt, v_gt, u :", t, ang_gt, p_gt, v_gt, u )
+            # plot loss
+            folder_path = os.path.join(args.path_results, dataset_name, 'trajectory')
+            create_folder(folder_path)
+            fig1, ax1 = plt.subplots(figsize=(20, 10))
+            p = p.detach().cpu().numpy()
+            p_gt_ = p_gt_.detach().cpu().numpy()
+            #ax1.plot(p[:, 0], p[:, 1], 'b1', label='iekf')
+            yaw = np.array([(iekf.to_rpy(R.detach())[2]).cpu() for R in Rot])
+            x_dir = np.cos(yaw)
+            y_dir = np.sin(yaw)
+            ax1.quiver(p[:, 0], p[:, 1],x_dir, y_dir, color='b')
+
+            print("p_gt_ : ",p_gt_.shape)
+            #ax1.plot(p_gt_[:, 0], p_gt_[:, 1], 'rx', label='gt')
+            x_dir_gt = np.cos(ang_gt[N0:N,2])
+            y_dir_gt = np.sin(ang_gt[N0:N,2])
+            ax1.quiver(p_gt_[:, 0], p_gt_[:, 1], x_dir_gt, y_dir_gt, color='r')
+            fig1.savefig(os.path.join(folder_path, "{}_{}.png".format(N0,N)))
+
 if __name__ == "__main__" : 
     #torch.set_default_device('cuda') 
     torch.set_default_tensor_type('torch.cuda.DoubleTensor')
@@ -680,4 +749,5 @@ if __name__ == "__main__" :
     #compare_filter(args, dataset)
     #run_imu_dr(args, dataset)
     #results_dr(args, dataset)
-    plot_iekf_loss(args, dataset)
+    #plot_iekf_loss(args, dataset)
+    plot_iekf_result(args, dataset)

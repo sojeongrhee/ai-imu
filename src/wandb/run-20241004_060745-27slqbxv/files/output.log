@@ -1,0 +1,131 @@
+path_normalize_factor :  ../temp/normalize_factors.p
+/home/wisrl/anaconda3/envs/imu_38/lib/python3.8/site-packages/torch/storage.py:414: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(io.BytesIO(b))
+path_normalize_factor :  ../temp/normalize_factors.p
+dataset_train_filter_keys :  odict_keys(['merged_output_py_bias_2'])
+dataset_list_rpe_keys :  dict_keys(['merged_output_py_bias_2', 'merged_output_py_bias_3'])
+The IEKF nets are saved in the file ../temp/iekfnets.p
+start time :  1727989666.854064
+/home/wisrl/anaconda3/envs/imu_38/lib/python3.8/site-packages/torch/storage.py:414: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(io.BytesIO(b))
+N :  1000 N0 :  27760
+clip length:  tensor(38) 2796
+precompute lost 1112 1149
+min seq : 2, max seq : 8
+loss 0 : 0.28817920998233076
+0 loss: 0.28818[0m
+gradient norm: 0.65517[0m
+Train Epoch:  1 	Loss: 0.28818
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 1 epoch: 7s
+
+N :  1000 N0 :  15180
+clip length:  tensor(40) 2796
+precompute lost 608 647
+min seq : 2, max seq : 8
+loss 0 : 0.9549007782091309
+0 loss: 0.95490[0m
+gradient norm: 0.59355[0m
+Train Epoch:  2 	Loss: 0.95490
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 2 epoch: 5s
+
+N :  1000 N0 :  17110
+clip length:  tensor(35) 2796
+precompute lost 688 722
+min seq : 2, max seq : 9
+loss 0 : 0.46174667389690416
+0 loss: 0.46175[0m
+[33mgradient norm: 3.20214[0m
+Train Epoch:  3 	Loss: 0.46175
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 3 epoch: 5s
+
+N :  1000 N0 :  23710
+clip length:  tensor(36) 2796
+precompute lost 952 987
+min seq : 2, max seq : 7
+loss 0 : 0.25955122739134817
+0 loss: 0.25955[0m
+gradient norm: 1.53398[0m
+Train Epoch:  4 	Loss: 0.25955
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 4 epoch: 5s
+
+N :  1000 N0 :  38440
+clip length:  tensor(38) 2796
+precompute lost 1540 1577
+min seq : 2, max seq : 7
+loss 0 : 0.03092472427161786
+0 loss: 0.03092[0m
+gradient norm: 0.24032[0m
+Train Epoch:  5 	Loss: 0.03092
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 5 epoch: 5s
+
+N :  1000 N0 :  22260
+clip length:  tensor(39) 2796
+precompute lost 892 930
+min seq : 2, max seq : 7
+loss 0 : 0.26848369872149763
+0 loss: 0.26848[0m
+gradient norm: 1.02061[0m
+Train Epoch:  6 	Loss: 0.26848
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 6 epoch: 5s
+
+N :  1000 N0 :  15770
+clip length:  tensor(39) 2796
+precompute lost 632 670
+min seq : 2, max seq : 9
+loss 0 : 1.0834064954628375
+0 loss: 1.08341[0m
+[33mgradient norm: 10.67654[0m
+Train Epoch:  7 	Loss: 1.08341
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 7 epoch: 5s
+
+N :  1000 N0 :  7250
+clip length:  tensor(38) 2796
+precompute lost 292 329
+min seq : 2, max seq : 8
+loss 0 : 0.06702505716444962
+0 loss: 0.06703[0m
+gradient norm: 0.43898[0m
+Train Epoch:  8 	Loss: 0.06703
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 8 epoch: 5s
+
+N :  1000 N0 :  39220
+clip length:  tensor(36) 2796
+precompute lost 1572 1607
+min seq : 2, max seq : 7
+loss 0 : 0.1744929414013932
+0 loss: 0.17449[0m
+gradient norm: 0.31427[0m
+Train Epoch:  9 	Loss: 0.17449
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 9 epoch: 5s
+
+N :  1000 N0 :  2190
+clip length:  tensor(40) 2796
+precompute lost 88 127
+min seq : 2, max seq : 7
+loss 0 : 31.796057852676107
+0 loss: 31.79606[0m
+[33mgradient norm: 22.92442[0m
+Train Epoch: 10 	Loss: 31.79606
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 10 epoch: 5s
+
+Validate filter
+Traceback (most recent call last):
+  File "main_usv.py", line 363, in <module>
+    launch(args)  # 'args' 객체를 전달
+  File "main_usv.py", line 28, in launch
+    train_filter(args, dataset)
+  File "/home/wisrl/pjw/ai-imu/src/train_torch_filter.py", line 108, in train_filter
+    test_loss = validate_filter(args, dataset, iekf, args.seq_dim)
+  File "/home/wisrl/pjw/ai-imu/src/train_torch_filter.py", line 122, in validate_filter
+    dataset.list_rpe[dataset_name], t, ang_gt, p_gt, v_gt, u, N0, b_acc_gt)
+KeyError: 'merged_output_py_bias_1'

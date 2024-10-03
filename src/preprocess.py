@@ -605,21 +605,106 @@ def run_ekf(datapath, exp_list, only_imu = False) :
         total_imu[exp_num] = from_imu
     return total, total_gps, total_imu
 
-    
+## from ekf_final get gyro, acc bias
+## duplicate gyro, bias for seq less than that
+## add that to ekf_py
+def add_acc_bias(datapath, exp_list) : 
+    start_seq = {1: 75409, 2: 281870, 3: 470125}
+    for exp_num in exp_list : 
+        ekf_df = pd.read_csv(os.path.join(datapath,'merged_output_py_final{}.csv'.format(exp_num)))
+
+        bias_df = pd.read_csv(os.path.join(datapath,'ekf_final_{}.csv'.format(exp_num)))
+        filter = np.array(bias_df['field.seq'])>70000
+        tmp_df = bias_df.loc[filter]
+        tmp_df = tmp_df.loc[:,['field.seq', 'field.b_acc_x', 'field.b_acc_y', 'field.b_acc_z', 'field.b_gyr_x','field.b_gyr_y','field.b_gyr_z']]
+        search_from  = np.array(bias_df['field.seq'])[filter]
+        merged_data = []
+        for i in range(len(ekf_df)) : 
+            tmp_seq = start_seq[exp_num] + i*2
+            idx = np.searchsorted(search_from, tmp_seq)
+            if idx >= len(search_from) : 
+                #pad with last one
+                bias_row = tmp_df.iloc[len(search_from)-1]
+            else : 
+                bias_row = tmp_df.iloc[idx]
+            ekf_row = ekf_df.iloc[i]
+            merged_row = {
+                '%time': int(ekf_row['%time']),
+                'lat': ekf_row['lat'],
+                'lon': ekf_row['lon'],
+                'alt': ekf_row['alt'],
+                'roll': ekf_row['roll'],
+                'pitch': ekf_row['pitch'],
+                'yaw': ekf_row['yaw'],
+                'vn': ekf_row['vn'],
+                've': ekf_row['ve'],
+                'vu': ekf_row['vu'],
+                'ax': ekf_row['ax'],
+                'ay': ekf_row['ay'],
+                'az': ekf_row['az'],
+                'af': ekf_row['af'],  # Duplicates as per instruction
+                'al': ekf_row['al'],  # Duplicates as per instruction
+                'au': ekf_row['au'],  # Duplicates as per instruction
+                'wx': ekf_row['wx'],
+                'wy': ekf_row['wy'],
+                'wz': ekf_row['wz'],
+                'wf': ekf_row['wf'],  # Duplicates as per instruction
+                'wl': ekf_row['wl'],  # Duplicates as per instruction
+                'wu': ekf_row['wu'],  # Duplicates as per instruction
+                'bax':bias_row['field.b_acc_x'],
+                'bay':bias_row['field.b_acc_y'],
+                'baz':bias_row['field.b_acc_z'],
+                'bgx':bias_row['field.b_gyr_x'],
+                'bgy':bias_row['field.b_gyr_y'],
+                'bgz':bias_row['field.b_gyr_z'],
+            }
+            merged_data.append(merged_row)
+        print("merged data: ",len(merged_data))
+        # Convert merged data to a DataFrame with the desired column order
+        column_order = [
+            '%time', 'lat', 'lon', 'alt', 'roll', 'pitch', 'yaw', 
+            'vn', 've', 'vu', 'ax', 'ay', 'az', 'af', 'al', 'au', 
+            'wx', 'wy', 'wz', 'wf', 'wl', 'wu','bax','bay','baz','bgx','bgy','bgz'
+        ]
+
+        merged_df = pd.DataFrame(merged_data, columns=column_order)
+
+        # Save the merged data to a new CSV file
+        merged_df.to_csv(os.path.join(datapath,'merged_output_py_bias_{}.csv'.format(exp_num)), index=False)
+
+        print("Merged CSV file created successfully!")
+
+        # Save the DataFrame as a pickle file
+        with open(os.path.join(datapath,'merged_output_py_bias_{}.p'.format(exp_num)), 'wb') as f:
+            pickle.dump(merged_df, f)
+
+        print("Merged CSV file created and saved as a pickle file successfully!")
+
+
+        # Load the pickle file
+        with open(os.path.join(datapath,'merged_output_py_bias_{}.p'.format(exp_num)), 'rb') as f:
+            loaded_df = pickle.load(f)
+
+        # Display the first few rows
+        print(loaded_df.head())
+            
+
+
+
 
 if __name__=="__main__" : 
     data_path = "../dataset/sheco_data"
     exp_list = [1,2,3]
 
-    total, total_gps, total_imu = run_ekf(data_path, exp_list, True)
-    #merge_final(exp_list, total, data_path)
-    #merge_gps_imu(exp_list,total, total_gps,data_path)
-    merge_ekf_py_imu(exp_list, total, data_path)
-    # for k,v in total_gps.items() : 
-    #     v_ = {}
-    #     for k_tmp,v_tmp in v.items() :
-    #         v_[int(k_tmp)] = [int(i) for i in v_tmp]
-    #     with open("from_gps{}.json".format(k),"w") as json_file : 
-    #         json.dump(v_, json_file)
+    # total, total_gps, total_imu = run_ekf(data_path, exp_list, True)
+    # #merge_final(exp_list, total, data_path)
+    # #merge_gps_imu(exp_list,total, total_gps,data_path)
+    # merge_ekf_py_imu(exp_list, total, data_path)
+    # # for k,v in total_gps.items() : 
+    # #     v_ = {}
+    # #     for k_tmp,v_tmp in v.items() :
+    # #         v_[int(k_tmp)] = [int(i) for i in v_tmp]
+    # #     with open("from_gps{}.json".format(k),"w") as json_file : 
+    # #         json.dump(v_, json_file)
     
-    
+    add_acc_bias(data_path, exp_list)

@@ -7,7 +7,7 @@ from termcolor import cprint
 from utils_torch_filter import TORCHIEKF
 from utils import prepare_data
 import copy
-
+import wandb
 max_loss = 2e4
 max_grad_norm = 1e0
 min_lr = 1e-5
@@ -37,6 +37,7 @@ def compute_delta_p(Rot, p):
     #step_size = 7
     distances = np.zeros(p.shape[0])
     dp = p[1:] - p[:-1]  #  this must be ground truth
+    dp = dp.cpu()
     print("dp : ", dp, "p shape: ",p.shape[0])
     distances[1:] = dp.norm(dim=1).cumsum(0).numpy()
     # print("distances : ", distances[1:])
@@ -74,10 +75,11 @@ def compute_delta_p(Rot, p):
             idx_diff[j] = [min(idx_shift, idx_diff[j][0]), max(idx_shift, idx_diff[j][1])]
             j+=1
     print("idx_diff:",idx_diff)
-    idxs_0 = list_rpe[0]
-    idxs_end = list_rpe[1]
+    idxs_0 = torch.Tensor(list_rpe[0]).clone().long()
+    idxs_end = torch.Tensor(list_rpe[1]).clone().long()
+    #print(Rot.dtype, p.dtype)
     delta_p = Rot[idxs_0].transpose(-1, -2).matmul(
-        ((p[idxs_end] - p[idxs_0]).float()).unsqueeze(-1)).squeeze()
+         ((p[idxs_end] - p[idxs_0]).double()).unsqueeze(-1)).squeeze()
     list_rpe[2] = delta_p
     #print("list_rpe : ", list_rpe[0], list_rpe[1], list_rpe[2])
     return list_rpe
@@ -92,11 +94,35 @@ def train_filter(args, dataset):
     start_time = time.time()
     print("start time : ",start_time)
     for epoch in range(1, args.epochs + 1):
-        train_loop(args, dataset, epoch, iekf, optimizer, args.seq_dim)
+        loss_train, grad_norm, N0 = train_loop(args, dataset, epoch, iekf, optimizer, args.seq_dim)
         save_iekf(args, iekf)
         print("Amount of time spent for {} epoch: {}s\n".format(epoch, int(time.time() - start_time)))
         start_time = time.time()
+        wandb.log({
+            'Train Loss' : loss_train,
+            'Grad Norm' : grad_norm,
+            'Start idx' : N0,
+        })
+        if epoch % 100 == 0 : 
+            print("Validate filter")
+            test_loss = validate_filter(args, dataset, iekf, args.seq_dim)
+            wandb.log({
+                'Validation Loss' : test_loss
+            })
+            print("Validate Loss for {} epoch: {}".format(epoch, test_loss))
+            iekf.train()
 
+def validate_filter(args, dataset, iekf, seq_dim) :
+    iekf.eval()
+    total_loss= 0
+    for i, (dataset_name, Ns) in enumerate(dataset.datasets_validatation_filter.items()):
+        t, ang_gt, p_gt, v_gt, u, N0, b_acc_gt = prepare_data_filter(dataset, dataset_name, Ns,
+                                                                  iekf, seq_dim, add_extra=True)
+        #print("t, ang_gt, p_gt, v_gt, u :", t, ang_gt, p_gt, v_gt, u )
+        loss = mini_batch_step(dataset, dataset_name, iekf,
+                               dataset.list_rpe_validation[dataset_name], t, ang_gt, p_gt, v_gt, u, N0, b_acc_gt)
+        total_loss += loss
+    return total_loss.cpu()
 
 def prepare_filter(args, dataset):
     iekf = TORCHIEKF()
@@ -136,7 +162,8 @@ def prepare_loss_data(args, dataset):
 
     for dataset_name, Ns in dataset.datasets_train_filter.items():
         t, ang_gt, p_gt, v_gt, u = prepare_data(args, dataset, dataset_name, 0)
-        p_gt = p_gt.double()
+        #p_gt = p_gt.double()
+        p_gt = p_gt.cuda()
         Rot_gt = torch.zeros(Ns[1], 3, 3)
         for k in range(Ns[1]):
             ang_k = ang_gt[k]
@@ -146,7 +173,8 @@ def prepare_loss_data(args, dataset):
     list_rpe_validation = {}
     for dataset_name, Ns in dataset.datasets_validatation_filter.items():
         t, ang_gt, p_gt, v_gt, u = prepare_data(args, dataset, dataset_name, 0)
-        p_gt = p_gt.double()
+        #p_gt = p_gt.double()
+        p_gt = p_gt.cuda()
         Rot_gt = torch.zeros(Ns[1], 3, 3)
         for k in range(Ns[1]):
             ang_k = ang_gt[k]
@@ -182,11 +210,11 @@ def train_loop(args, dataset, epoch, iekf, optimizer, seq_dim):
     loss_train = 0
     optimizer.zero_grad()
     for i, (dataset_name, Ns) in enumerate(dataset.datasets_train_filter.items()):
-        t, ang_gt, p_gt, v_gt, u, N0 = prepare_data_filter(dataset, dataset_name, Ns,
-                                                                  iekf, seq_dim)
+        t, ang_gt, p_gt, v_gt, u, N0, b_acc_gt = prepare_data_filter(dataset, dataset_name, Ns,
+                                                                  iekf, seq_dim, add_extra=True)
         #print("t, ang_gt, p_gt, v_gt, u :", t, ang_gt, p_gt, v_gt, u )
         loss = mini_batch_step(dataset, dataset_name, iekf,
-                               dataset.list_rpe[dataset_name], t, ang_gt, p_gt, v_gt, u, N0)
+                               dataset.list_rpe[dataset_name], t, ang_gt, p_gt, v_gt, u, N0, b_acc_gt)
         print("loss {} : {} ".format(i, loss))
 
         if loss is -1 or torch.isnan(loss):
@@ -212,7 +240,7 @@ def train_loop(args, dataset, epoch, iekf, optimizer, seq_dim):
         optimizer.zero_grad()
         cprint("gradient norm: {:.5f}".format(g_norm))
     print('Train Epoch: {:2d} \tLoss: {:.5f}'.format(epoch, loss_train))
-    return loss_train
+    return loss_train.detach().clone().cpu(), g_norm, N0
 
 
 def save_iekf(args, iekf):
@@ -221,15 +249,31 @@ def save_iekf(args, iekf):
     print("The IEKF nets are saved in the file " + file_name)
 
 
-def mini_batch_step(dataset, dataset_name, iekf, list_rpe, t, ang_gt, p_gt, v_gt, u, N0):
+def mini_batch_step(dataset, dataset_name, iekf, list_rpe, t, ang_gt, p_gt, v_gt, u, N0, b_acc_gt):
     iekf.set_Q()
     #print("u shape:",u.shape)
     measurements_covs = iekf.forward_nets(u)
     #print("measurements cov : ",measurements_covs)
     #print(len(t), len(u), len(v_gt),len(p_gt),t.shape[0],ang_gt[0])
-    Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = iekf.run(t, u, measurements_covs,
+    if b_acc_gt is not None: 
+        Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = iekf.run(t, u, measurements_covs,
+                                                            v_gt, p_gt, t.shape[0],
+                                                            ang_gt[0], b_acc_gt[0])
+    else : 
+        Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = iekf.run(t, u, measurements_covs,
                                                             v_gt, p_gt, t.shape[0],
                                                             ang_gt[0])
+    # for i in range(len(t)) : 
+    #     print("t : ", t[i])
+    #     print("Rot : ", Rot[i])
+    #     print("v : ", v[i])
+    #     print("v_gt :", v_gt[i])
+    #     print("p : ", p[i])
+    #     print("p_gt : ",p_gt[i])
+    #     print("b_omega : ",b_omega[i])
+    #     print("b_acc : ", b_acc[i])
+    #     print("Rot_c_i : ",Rot_c_i[i])
+    #     print("t_c_i : ",t_c_i[i])
     #print(len(Rot), len(v), len(p), len(list_rpe[0]),len(list_rpe[1]),len(list_rpe[2]))
     list_rpe[2] = list_rpe[2].to('cuda')
     delta_p, delta_p_gt, _, _ = precompute_lost(Rot, p, list_rpe, N0)
@@ -253,7 +297,7 @@ def set_optimizer(iekf):
     return optimizer
 
 
-def prepare_data_filter(dataset, dataset_name, Ns, iekf, seq_dim):
+def prepare_data_filter(dataset, dataset_name, Ns, iekf, seq_dim, add_extra=False):
     # get data with trainable instant
     t, ang_gt, p_gt, v_gt,  u = dataset.get_data(dataset_name)
     t = t[Ns[0]: Ns[1]]
@@ -274,7 +318,12 @@ def prepare_data_filter(dataset, dataset_name, Ns, iekf, seq_dim):
     if iekf.mes_net.training:
         u = dataset.add_noise(u)
     u = u.to('cuda')
-    return t, ang_gt, p_gt, v_gt, u, N0
+
+    b_acc_gt = None
+    if add_extra :
+        u_bias  = dataset.get_extra_data(dataset_name)
+        b_acc_gt = u_bias[N0:N,:3].double().to('cuda')
+    return t, ang_gt, p_gt, v_gt, u, N0, b_acc_gt
 
 
 def get_start_and_end(seq_dim, u):
@@ -332,4 +381,6 @@ def precompute_lost(Rot, p, list_rpe, N0):
         delta_p = Rot_10_Hz[idxs_0_bis].transpose(-1, -2).matmul(
         (p_10_Hz[idxs_end_bis] - p_10_Hz[idxs_0_bis]).unsqueeze(-1)).squeeze()
         distance = delta_p_gt.norm(dim=1).unsqueeze(-1)
+        #print("delta_p : ",delta_p)
+        #print("distance_gt : ",distance)
         return delta_p.double() / distance.double(), delta_p_gt.double() / distance.double() , min_seq, max_seq

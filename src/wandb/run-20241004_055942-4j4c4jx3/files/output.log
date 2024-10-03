@@ -1,0 +1,549 @@
+path_normalize_factor :  ../temp/normalize_factors.p
+/home/wisrl/anaconda3/envs/imu_38/lib/python3.8/site-packages/torch/storage.py:414: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(io.BytesIO(b))
+path_normalize_factor :  ../temp/normalize_factors.p
+dataset_train_filter_keys :  odict_keys(['merged_output_py_bias_2'])
+dataset_list_rpe_keys :  dict_keys(['merged_output_py_bias_2', 'merged_output_py_bias_3'])
+The IEKF nets are saved in the file ../temp/iekfnets.p
+start time :  1727989183.7162046
+/home/wisrl/anaconda3/envs/imu_38/lib/python3.8/site-packages/torch/storage.py:414: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(io.BytesIO(b))
+N :  1000 N0 :  6340
+clip length:  tensor(37) 2796
+precompute lost 256 292
+min seq : 2, max seq : 11
+loss 0 : 8.19266416081429
+0 loss: 8.19266[0m
+[33mgradient norm: 5.19522[0m
+Train Epoch:  1 	Loss: 8.19266
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 1 epoch: 7s
+
+N :  1000 N0 :  19610
+clip length:  tensor(36) 2796
+precompute lost 788 823
+min seq : 2, max seq : 9
+loss 0 : 0.05160497490952128
+0 loss: 0.05160[0m
+gradient norm: 0.75776[0m
+Train Epoch:  2 	Loss: 0.05160
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 2 epoch: 5s
+
+N :  1000 N0 :  25580
+clip length:  tensor(39) 2796
+precompute lost 1024 1062
+min seq : 2, max seq : 14
+loss 0 : 1.751439987131526
+0 loss: 1.75144[0m
+[33mgradient norm: 5.35745[0m
+Train Epoch:  3 	Loss: 1.75144
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 3 epoch: 5s
+
+N :  1000 N0 :  50430
+clip length:  tensor(37) 2796
+precompute lost 2020 2056
+min seq : 2, max seq : 15
+loss 0 : 0.7014256220410451
+0 loss: 0.70143[0m
+gradient norm: 0.38278[0m
+Train Epoch:  4 	Loss: 0.70143
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 4 epoch: 5s
+
+N :  1000 N0 :  29310
+clip length:  tensor(36) 2796
+precompute lost 1176 1211
+min seq : 2, max seq : 8
+loss 0 : 0.09406108529034017
+0 loss: 0.09406[0m
+gradient norm: 0.79890[0m
+Train Epoch:  5 	Loss: 0.09406
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 5 epoch: 5s
+
+N :  1000 N0 :  40260
+clip length:  tensor(39) 2796
+precompute lost 1612 1650
+min seq : 2, max seq : 7
+loss 0 : 1.130324457274739
+0 loss: 1.13032[0m
+gradient norm: 0.75763[0m
+Train Epoch:  6 	Loss: 1.13032
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 6 epoch: 5s
+
+N :  1000 N0 :  60
+clip length:  tensor(39) 2796
+precompute lost 4 42
+min seq : 2, max seq : 8
+loss 0 : 89.56209944117198
+0 loss: 89.56210[0m
+[33mgradient norm: 576.41489[0m
+Train Epoch:  7 	Loss: 89.56210
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 7 epoch: 5s
+
+N :  1000 N0 :  28790
+clip length:  tensor(40) 2796
+precompute lost 1152 1191
+min seq : 2, max seq : 8
+loss 0 : 0.03677756101581871
+0 loss: 0.03678[0m
+gradient norm: 0.23678[0m
+Train Epoch:  8 	Loss: 0.03678
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 8 epoch: 5s
+
+N :  1000 N0 :  47110
+clip length:  tensor(36) 2796
+precompute lost 1888 1923
+min seq : 2, max seq : 8
+loss 0 : 0.3234412252787441
+0 loss: 0.32344[0m
+gradient norm: 1.41971[0m
+Train Epoch:  9 	Loss: 0.32344
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 9 epoch: 5s
+
+N :  1000 N0 :  47920
+clip length:  tensor(36) 2796
+precompute lost 1920 1955
+min seq : 2, max seq : 8
+loss 0 : 2.118115780185506
+0 loss: 2.11812[0m
+[33mgradient norm: 10.98594[0m
+Train Epoch: 10 	Loss: 2.11812
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 10 epoch: 5s
+
+N :  1000 N0 :  14580
+clip length:  tensor(40) 2796
+precompute lost 584 623
+min seq : 2, max seq : 8
+loss 0 : 0.8766429896452164
+0 loss: 0.87664[0m
+gradient norm: 0.87100[0m
+Train Epoch: 11 	Loss: 0.87664
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 11 epoch: 5s
+
+N :  1000 N0 :  34490
+clip length:  tensor(40) 2796
+precompute lost 1380 1419
+min seq : 2, max seq : 15
+loss 0 : 0.23878504636654607
+0 loss: 0.23879[0m
+gradient norm: 0.30426[0m
+Train Epoch: 12 	Loss: 0.23879
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 12 epoch: 5s
+
+N :  1000 N0 :  50180
+clip length:  tensor(39) 2796
+precompute lost 2008 2046
+min seq : 2, max seq : 15
+loss 0 : 1.090089405063805
+0 loss: 1.09009[0m
+gradient norm: 2.53363[0m
+Train Epoch: 13 	Loss: 1.09009
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 13 epoch: 5s
+
+N :  1000 N0 :  34040
+clip length:  tensor(37) 2796
+precompute lost 1364 1400
+min seq : 2, max seq : 16
+loss 0 : 1.6385529657639535
+0 loss: 1.63855[0m
+[33mgradient norm: 12.38260[0m
+Train Epoch: 14 	Loss: 1.63855
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 14 epoch: 5s
+
+N :  1000 N0 :  50230
+clip length:  tensor(37) 2796
+precompute lost 2012 2048
+min seq : 2, max seq : 15
+loss 0 : 1.2946596032541535
+0 loss: 1.29466[0m
+gradient norm: 1.77287[0m
+Train Epoch: 15 	Loss: 1.29466
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 15 epoch: 5s
+
+N :  1000 N0 :  31780
+clip length:  tensor(40) 2796
+precompute lost 1272 1311
+min seq : 2, max seq : 8
+loss 0 : 0.8644600696139266
+0 loss: 0.86446[0m
+gradient norm: 0.32280[0m
+Train Epoch: 16 	Loss: 0.86446
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 16 epoch: 5s
+
+N :  1000 N0 :  9330
+clip length:  tensor(37) 2796
+precompute lost 376 412
+min seq : 2, max seq : 7
+loss 0 : 0.41041725907904186
+0 loss: 0.41042[0m
+[33mgradient norm: 4.35498[0m
+Train Epoch: 17 	Loss: 0.41042
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 17 epoch: 5s
+
+N :  1000 N0 :  6650
+clip length:  tensor(38) 2796
+precompute lost 268 305
+min seq : 2, max seq : 10
+loss 0 : 2.059506656780866
+0 loss: 2.05951[0m
+gradient norm: 0.54688[0m
+Train Epoch: 18 	Loss: 2.05951
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 18 epoch: 5s
+
+N :  1000 N0 :  33150
+clip length:  tensor(36) 2796
+precompute lost 1328 1363
+min seq : 2, max seq : 13
+loss 0 : 1.828807550026828
+0 loss: 1.82881[0m
+gradient norm: 1.39044[0m
+Train Epoch: 19 	Loss: 1.82881
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 19 epoch: 5s
+
+N :  1000 N0 :  37720
+clip length:  tensor(36) 2796
+precompute lost 1512 1547
+min seq : 2, max seq : 7
+loss 0 : 0.0990904826943722
+0 loss: 0.09909[0m
+gradient norm: 0.46126[0m
+Train Epoch: 20 	Loss: 0.09909
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 20 epoch: 5s
+
+N :  1000 N0 :  45860
+clip length:  tensor(39) 2796
+precompute lost 1836 1874
+min seq : 2, max seq : 8
+loss 0 : 0.2227923685005555
+0 loss: 0.22279[0m
+gradient norm: 0.63080[0m
+Train Epoch: 21 	Loss: 0.22279
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 21 epoch: 5s
+
+N :  1000 N0 :  12970
+clip length:  tensor(39) 2796
+precompute lost 520 558
+min seq : 2, max seq : 9
+loss 0 : 0.6414316117260797
+0 loss: 0.64143[0m
+gradient norm: 1.27249[0m
+Train Epoch: 22 	Loss: 0.64143
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 22 epoch: 5s
+
+N :  1000 N0 :  36840
+clip length:  tensor(37) 2796
+precompute lost 1476 1512
+min seq : 2, max seq : 7
+loss 0 : 0.06440405885574314
+0 loss: 0.06440[0m
+gradient norm: 0.04888[0m
+Train Epoch: 23 	Loss: 0.06440
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 23 epoch: 5s
+
+N :  1000 N0 :  47610
+clip length:  tensor(36) 2796
+precompute lost 1908 1943
+min seq : 2, max seq : 8
+loss 0 : 0.7867107025065146
+0 loss: 0.78671[0m
+[33mgradient norm: 8.30918[0m
+Train Epoch: 24 	Loss: 0.78671
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 24 epoch: 5s
+
+N :  1000 N0 :  13120
+clip length:  tensor(36) 2796
+precompute lost 528 563
+min seq : 2, max seq : 8
+loss 0 : 0.7471334628065194
+0 loss: 0.74713[0m
+gradient norm: 1.02274[0m
+Train Epoch: 25 	Loss: 0.74713
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 25 epoch: 5s
+
+N :  1000 N0 :  10860
+clip length:  tensor(37) 2796
+precompute lost 436 472
+min seq : 3, max seq : 12
+loss 0 : 4.008553001781342
+0 loss: 4.00855[0m
+[33mgradient norm: 8.80280[0m
+Train Epoch: 26 	Loss: 4.00855
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 26 epoch: 5s
+
+N :  1000 N0 :  21660
+clip length:  tensor(39) 2796
+precompute lost 868 906
+min seq : 2, max seq : 7
+loss 0 : 0.05100595248750208
+0 loss: 0.05101[0m
+gradient norm: 0.60050[0m
+Train Epoch: 27 	Loss: 0.05101
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 27 epoch: 5s
+
+N :  1000 N0 :  42790
+clip length:  tensor(40) 2796
+precompute lost 1712 1751
+min seq : 2, max seq : 12
+loss 0 : 0.3429930272288692
+0 loss: 0.34299[0m
+gradient norm: 1.05431[0m
+Train Epoch: 28 	Loss: 0.34299
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 28 epoch: 5s
+
+N :  1000 N0 :  46440
+clip length:  tensor(37) 2796
+precompute lost 1860 1896
+min seq : 2, max seq : 8
+loss 0 : 0.3906179353215019
+0 loss: 0.39062[0m
+gradient norm: 0.82990[0m
+Train Epoch: 29 	Loss: 0.39062
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 29 epoch: 5s
+
+N :  1000 N0 :  41150
+clip length:  tensor(38) 2796
+precompute lost 1648 1685
+min seq : 2, max seq : 14
+loss 0 : 1.0979513690503335
+0 loss: 1.09795[0m
+[33mgradient norm: 6.42892[0m
+Train Epoch: 30 	Loss: 1.09795
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 30 epoch: 5s
+
+N :  1000 N0 :  44670
+clip length:  tensor(39) 2796
+precompute lost 1788 1826
+min seq : 2, max seq : 8
+loss 0 : 0.09305699973601791
+0 loss: 0.09306[0m
+gradient norm: 0.66888[0m
+Train Epoch: 31 	Loss: 0.09306
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 31 epoch: 5s
+
+N :  1000 N0 :  54750
+clip length:  tensor(38) 2796
+precompute lost 2192 2229
+min seq : 2, max seq : 7
+loss 0 : 0.5955953204417972
+0 loss: 0.59560[0m
+gradient norm: 0.14323[0m
+Train Epoch: 32 	Loss: 0.59560
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 32 epoch: 5s
+
+N :  1000 N0 :  38340
+clip length:  tensor(37) 2796
+precompute lost 1536 1572
+min seq : 2, max seq : 7
+loss 0 : 0.05137514065474185
+0 loss: 0.05138[0m
+gradient norm: 0.49269[0m
+Train Epoch: 33 	Loss: 0.05138
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 33 epoch: 5s
+
+N :  1000 N0 :  34220
+clip length:  tensor(36) 2796
+precompute lost 1372 1407
+min seq : 2, max seq : 16
+loss 0 : 1.0046334031448494
+0 loss: 1.00463[0m
+[33mgradient norm: 3.82238[0m
+Train Epoch: 34 	Loss: 1.00463
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 34 epoch: 5s
+
+N :  1000 N0 :  30530
+clip length:  tensor(37) 2796
+precompute lost 1224 1260
+min seq : 2, max seq : 8
+loss 0 : 0.13584806675665237
+0 loss: 0.13585[0m
+gradient norm: 1.12443[0m
+Train Epoch: 35 	Loss: 0.13585
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 35 epoch: 5s
+
+N :  1000 N0 :  42620
+clip length:  tensor(36) 2796
+precompute lost 1708 1743
+min seq : 2, max seq : 12
+loss 0 : 0.3515740814162211
+0 loss: 0.35157[0m
+gradient norm: 1.11302[0m
+Train Epoch: 36 	Loss: 0.35157
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 36 epoch: 5s
+
+N :  1000 N0 :  50440
+clip length:  tensor(37) 2796
+precompute lost 2020 2056
+min seq : 2, max seq : 15
+loss 0 : 0.34836051038999294
+0 loss: 0.34836[0m
+gradient norm: 0.33303[0m
+Train Epoch: 37 	Loss: 0.34836
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 37 epoch: 5s
+
+N :  1000 N0 :  47350
+clip length:  tensor(38) 2796
+precompute lost 1896 1933
+min seq : 2, max seq : 8
+loss 0 : 0.5702279675684241
+0 loss: 0.57023[0m
+[33mgradient norm: 4.74052[0m
+Train Epoch: 38 	Loss: 0.57023
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 38 epoch: 5s
+
+N :  1000 N0 :  32120
+clip length:  tensor(36) 2796
+precompute lost 1288 1323
+min seq : 2, max seq : 8
+loss 0 : 0.3770949055600963
+0 loss: 0.37709[0m
+gradient norm: 2.22565[0m
+Train Epoch: 39 	Loss: 0.37709
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 39 epoch: 5s
+
+N :  1000 N0 :  13100
+clip length:  tensor(40) 2796
+precompute lost 524 563
+min seq : 2, max seq : 8
+loss 0 : 0.501945487562878
+0 loss: 0.50195[0m
+gradient norm: 1.38933[0m
+Train Epoch: 40 	Loss: 0.50195
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 40 epoch: 5s
+
+N :  1000 N0 :  32330
+clip length:  tensor(37) 2796
+precompute lost 1296 1332
+min seq : 2, max seq : 8
+loss 0 : 0.9985063154797045
+0 loss: 0.99851[0m
+[33mgradient norm: 6.77501[0m
+Train Epoch: 41 	Loss: 0.99851
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 41 epoch: 5s
+
+N :  1000 N0 :  13180
+clip length:  tensor(39) 2796
+precompute lost 528 566
+min seq : 2, max seq : 8
+loss 0 : 0.4702626900591743
+0 loss: 0.47026[0m
+gradient norm: 1.43667[0m
+Train Epoch: 42 	Loss: 0.47026
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 42 epoch: 5s
+
+N :  1000 N0 :  4490
+clip length:  tensor(40) 2796
+precompute lost 180 219
+min seq : 2, max seq : 7
+loss 0 : 11.75679691454471
+0 loss: 11.75680[0m
+[33mgradient norm: 17.27734[0m
+Train Epoch: 43 	Loss: 11.75680
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 43 epoch: 5s
+
+N :  1000 N0 :  54770
+clip length:  tensor(39) 2796
+precompute lost 2192 2230
+min seq : 2, max seq : 7
+loss 0 : 0.8636516427669817
+0 loss: 0.86365[0m
+gradient norm: 0.25710[0m
+Train Epoch: 44 	Loss: 0.86365
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 44 epoch: 5s
+
+N :  1000 N0 :  33530
+clip length:  tensor(34) 2796
+precompute lost 1344 1377
+min seq : 2, max seq : 13
+loss 0 : 0.7305676052191326
+0 loss: 0.73057[0m
+gradient norm: 0.91235[0m
+Train Epoch: 45 	Loss: 0.73057
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 45 epoch: 5s
+
+N :  1000 N0 :  41850
+clip length:  tensor(37) 2796
+precompute lost 1676 1712
+min seq : 2, max seq : 14
+loss 0 : 1.141214879092874
+0 loss: 1.14121[0m
+[33mgradient norm: 3.13258[0m
+Train Epoch: 46 	Loss: 1.14121
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 46 epoch: 5s
+
+N :  1000 N0 :  27230
+clip length:  tensor(37) 2796
+precompute lost 1092 1128
+min seq : 2, max seq : 8
+loss 0 : 0.30134622498121194
+0 loss: 0.30135[0m
+gradient norm: 0.90797[0m
+Train Epoch: 47 	Loss: 0.30135
+The IEKF nets are saved in the file ../temp/iekfnets.p
+Amount of time spent for 47 epoch: 5s
+
+N :  1000 N0 :  22740
+clip length:  tensor(37) 2796
+precompute lost 912 948
+min seq : 2, max seq : 7
+loss 0 : 0.15302222129795992
+0 loss: 0.15302[0m
+Traceback (most recent call last):
+  File "main_usv.py", line 359, in <module>
+    project="ai-imu",
+  File "main_usv.py", line 28, in launch
+    train_filter(args, dataset)
+  File "/home/wisrl/pjw/ai-imu/src/train_torch_filter.py", line 97, in train_filter
+    loss_train, grad_norm = train_loop(args, dataset, epoch, iekf, optimizer, args.seq_dim)
+  File "/home/wisrl/pjw/ai-imu/src/train_torch_filter.py", line 230, in train_loop
+    loss_train.backward()  # loss_train.cuda().backward()
+  File "/home/wisrl/anaconda3/envs/imu_38/lib/python3.8/site-packages/torch/_tensor.py", line 521, in backward
+    torch.autograd.backward(
+  File "/home/wisrl/anaconda3/envs/imu_38/lib/python3.8/site-packages/torch/autograd/__init__.py", line 289, in backward
+    _engine_run_backward(
+  File "/home/wisrl/anaconda3/envs/imu_38/lib/python3.8/site-packages/torch/autograd/graph.py", line 768, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+KeyboardInterrupt

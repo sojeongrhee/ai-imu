@@ -9,6 +9,7 @@ from main_kitti import KITTIArgs, KITTIDataset, KITTIParameters
 from main_usv import USVDataset, USVArgs
 from utils_torch_filter import TORCHIEKF
 from utils import prepare_data
+from utils_numpy_filter import NUMPYIEKF
 
 def plot_gt(args, dataset) : 
     # 16599, 53663
@@ -334,6 +335,62 @@ def calc_offset(off_dict, name) :
         ekf_time = np.array(df_ekf.iloc[:,0]).reshape(-1,1)
         res.append(ekf_time[off_dict[name][exp_num-1]][0] - ref_time[off_dict["sample"][exp_num-1]][0])
     return res
+
+def plot_vbody() : 
+    data_path = "../dataset/sheco_data"
+    exp_list = [1,2,3]
+    for exp_num in exp_list : 
+        ekf_name = "merged_output_py_final{}.csv".format(exp_num)
+        df_ekf = pd.read_csv(os.path.join(data_path, ekf_name))
+        Rot_c_i = np.eye(3)
+        t_c_i = np.array([0.32, 0.1, -0.11])
+        #t_c_i = np.array([-3, 0, 0])
+        b_omega = 0
+        time = np.array(df_ekf.iloc[:,0])/1e9
+        time = time - time[0]
+        v_body = np.zeros((len(df_ekf),3))
+        v_body_b = np.zeros((len(df_ekf),3))
+        ang_vel = np.zeros((len(df_ekf),3))
+        for i in range(len(df_ekf)) : 
+            roll = df_ekf.loc[i,"roll"]
+            pitch = df_ekf.loc[i,"pitch"]
+            yaw = df_ekf.loc[i,"yaw"]
+            v_x = df_ekf.loc[i,"vn"]
+            v_y = df_ekf.loc[i,"ve"]
+            v_z = df_ekf.loc[i,"vu"]
+            v = np.array([v_x, v_y, v_z])
+            w_x = df_ekf.loc[i,"wx"]
+            w_y = df_ekf.loc[i,"wy"]
+            w_z = df_ekf.loc[i,"wz"]
+            ang_vel[i] = np.array([w_x, w_y, w_z])
+            Rot = NUMPYIEKF.from_rpy(roll, pitch, yaw)
+            v_imu = Rot.T.dot(v)
+            v_body_b[i] = Rot_c_i.T.dot(v_imu)
+            v_body[i] = Rot_c_i.T.dot(v_imu + NUMPYIEKF.skew(ang_vel[i] - b_omega).dot(t_c_i))
+        
+        fig1, ax1 = plt.subplots(3,1,sharex=False,figsize=(20,10))
+
+        start = 100
+        idx = np.arange(len(df_ekf))
+
+        ax1[0].plot(time[start:], v_body[start:,0])
+        ax1[0].plot(time[start:], v_body_b[start:,0])
+        ax1[0].plot(time[start:], ang_vel[start:,0])
+        ax1[1].plot(time[start:], v_body[start:,1])
+        ax1[1].plot(time[start:], v_body_b[start:,1])
+        ax1[1].plot(time[start:], ang_vel[start:,1])
+        ax1[2].plot(idx[start:], v_body[start:,2])
+        ax1[2].plot(idx[start:], v_body_b[start:,2]) 
+        ax1[2].plot(idx[start:], ang_vel[start:,2])
+        
+        ax1[0].set(xlabel='time (s)',ylabel=r'$v_x (m/s)$',title="x body speed")
+        ax1[1].set(xlabel='time (s)',ylabel=r'$v_y (m/s)$',title="y body speed")
+        ax1[2].set(xlabel='time (s)',ylabel=r'$v_z (m/s)$',title="z body speed")
+        ax1[0].legend(['v_body','v_body_b', 'w_meas'])
+        ax1[1].legend(['v_body', 'v_body_b','w_meas'])
+        ax1[2].legend(['v_body', 'v_body_b','w_meas'])
+        fig1.savefig(os.path.join("./plot", "exp{}_vbody.png".format(exp_num)))
+        
 if __name__=='__main__' :
     #plot_dt_sc()
     #args = KITTIArgs()
@@ -342,12 +399,14 @@ if __name__=='__main__' :
     #args = USVArgs()
     #dataset = USVDataset(args)
     #print(dataset.datasets)
-    name = "ekf_output"
-    off_dict_gps = {"sample" : [2,0,2], "ekf_output" : [13,10,13], "ekf_ext_" : [13,13,13], "ekf_ext_rev_" : [13,13,12]} 
-    off_dict_imu = {"sample" : [0,1,0], "ekf_output" : [9,7,9], "ekf_ext_" : [9,7,9], "ekf_ext_rev_" : [9,7,9]}
-    offset = calc_offset(off_dict_gps, name)
-    print(offset)
-    folder_dict = {"sample" : ".", "ekf_output" : "output", "ekf_ext_" : "ext", "ekf_ext_rev_" : "rev"}
-    #[26201680711117849, 26201887724724675, 26202270859414101]
-    plot_timestamp(folder_dict[name], name,offset)
+    # name = "ekf_output"
+    # off_dict_gps = {"sample" : [2,0,2], "ekf_output" : [13,10,13], "ekf_ext_" : [13,13,13], "ekf_ext_rev_" : [13,13,12]} 
+    # off_dict_imu = {"sample" : [0,1,0], "ekf_output" : [9,7,9], "ekf_ext_" : [9,7,9], "ekf_ext_rev_" : [9,7,9]}
+    # offset = calc_offset(off_dict_gps, name)
+    # print(offset)
+    # folder_dict = {"sample" : ".", "ekf_output" : "output", "ekf_ext_" : "ext", "ekf_ext_rev_" : "rev"}
+    # #[26201680711117849, 26201887724724675, 26202270859414101]
+    # plot_timestamp(folder_dict[name], name,offset)
     #plot_bias()
+    
+    plot_vbody()

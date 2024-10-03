@@ -6,7 +6,7 @@ import time
 from termcolor import cprint
 from utils_numpy_filter import NUMPYIEKF
 from utils import prepare_data
-
+from scipy.linalg import cho_factor, cho_solve
 torch.set_default_tensor_type('torch.cuda.DoubleTensor')
 class InitProcessCovNet(torch.nn.Module):
 
@@ -126,27 +126,47 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
                             ).double()
         self.cov0_measurement = torch.Tensor([self.cov_lat, self.cov_up]).double()
 
-    def run(self, t, u,  measurements_covs, v_mes, p_mes, N, ang0):
+    def run(self, t, u,  measurements_covs, v_mes, p_mes, N, ang0, b_acc0=None):
 
         dt = t[1:] - t[:-1]  # (s)
         Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P = self.init_run(dt, u, p_mes, v_mes,
-                                       N, ang0)
+                                       N, ang0, b_acc0)
 
         for i in range(1, N):
             Rot_i, v_i, p_i, b_omega_i, b_acc_i, Rot_c_i_i, t_c_i_i, P_i = \
                 self.propagate(Rot[i-1], v[i-1], p[i-1], b_omega[i-1], b_acc[i-1], Rot_c_i[i-1],
                                t_c_i[i-1], P, u[i], dt[i-1])
-
+            #print("dt : ", dt[i-1])
             Rot[i], v[i], p[i], b_omega[i], b_acc[i], Rot_c_i[i], t_c_i[i], P = \
                 self.update(Rot_i, v_i, p_i, b_omega_i, b_acc_i, Rot_c_i_i, t_c_i_i, P_i,
                             u[i], i, measurements_covs[i])
+            # print("Rot : ", Rot_i)
+            # print("Rot_u : ", Rot[i])
+            # print("v : ", v_i)
+            # print("v_u : ", v[i])
+            # print("v_gt :", v_mes[i])
+            # print("p : ", p_i)
+            # print("p_u : ", p[i])
+            # print("p_gt : ",p_mes[i])
+            # print("b_omega : ",b_omega_i)
+            # print("b_omega_u : ",b_omega[i])
+            # print("b_acc : ", b_acc_i)
+            # print("b_acc_u : ", b_acc[i])
+            # print("Rot_c_i : ",Rot_c_i_i)
+            # print("Rot_c_i_u : ",Rot_c_i[i])
+            # print("t_c_i : ",t_c_i_i)
+            # print("t_c_i_u : ",t_c_i[i])
         return Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i
 
-    def init_run(self, dt, u, p_mes, v_mes, N, ang0):
+    def init_run(self, dt, u, p_mes, v_mes, N, ang0, b_acc0=None):
             Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = \
                 self.init_saved_state(dt, N, ang0)
+            #b_acc[0,:] = torch.Tensor([0.6, -0.8, -2*self.g[2]]).double()
+            if b_acc0 is not None :
+                b_acc[0, :] = torch.Tensor(b_acc0).double()
             Rot[0] = self.from_rpy(ang0[0], ang0[1], ang0[2])
             v[0] = v_mes[0]
+            #t_c_i[0,:] = torch.Tensor([0.32, 0.1, -0.11]).double()
             P = self.init_covariance()
             return Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P
 
@@ -159,6 +179,7 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         P[12:15, 12:15] = self.cov_b_acc0*beta[3]*self.Id3
         P[15:18, 15:18] = self.cov_Rot_c_i0*beta[4]*self.Id3
         P[18:21, 18:21] = self.cov_t_c_i0*beta[5]*self.Id3
+        #print("P : ",P)
         return P
 
 
@@ -177,7 +198,9 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
                   P_prev, u, dt):
         Rot_prev = Rot_prev.clone()
         acc_b = u[3:6] - b_acc_prev
-        acc = Rot_prev.mv(acc_b) + self.g
+        #print("acc_b : ", acc_b)
+        acc = Rot_prev.mv(acc_b) - self.g
+        #print("acc : ", acc)
         v = v_prev + acc * dt
         p = p_prev + v_prev.clone() * dt + 1/2 * acc * dt**2
 
@@ -230,19 +253,21 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         # velocity in imu frame
         v_imu = Rot.t().mv(v)
         omega = u[:3] - b_omega
-        # velocity in body frame
-        v_body = Rot_c_i.t().mv(v_imu) + self.skew(t_c_i).mv(omega)
         Omega = self.skew(omega)
+        # velocity in body frame
+        #v_body = Rot_c_i.t().mv(v_imu) + self.skew(t_c_i).mv(omega)
+        v_body = Rot_c_i.t().mv(v_imu + Omega.mv(t_c_i))
+        #print("v_body : ", v_body)
         # Jacobian in car frame
-        H_v_imu = Rot_c_i.t().mm(self.skew(v_imu))
+        H_v_imu = self.skew(v_imu + Omega.mv(t_c_i))
         # H_t_c_i = self.skew(t_c_i)
         H_t_c_i = -self.skew(t_c_i)
 
         H = P.new_zeros(2, self.P_dim)
         H[:, 3:6] = Rot_body.t()[1:]
-        H[:, 15:18] = H_v_imu[1:]
-        H[:, 9:12] = H_t_c_i[1:]
-        H[:, 18:21] = -Omega[1:]
+        H[:, 9:12] = (Rot_c_i.t().mm(H_t_c_i))[1:]
+        H[:, 15:18] = (Rot_c_i.t().mm(H_v_imu))[1:]
+        H[:, 18:21] = (Rot_c_i.t().mm(Omega))[1:]
         r = - v_body[1:]
         R = torch.diag(measurement_cov)
 
@@ -256,13 +281,18 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         S = H.mm(P).mm(H.t()) + R
         #Kt, _ = torch.gesv(P.mm(H.t()).t(), S)
         #print("H :", H)
+        #print("S_1 : ",H.mm(P).mm(H.t()))
+        #print("R : ",R)
         #print("P :", P)
         #print("R :", R)
         #print("A :", S)
         #print("B :",P.mm(H.t()))
-        Kt = torch.linalg.solve(S,P.mm(H.t()).t())
+        S_inv = torch.linalg.inv(S)
+        #Kt = torch.linalg.solve(S,P.mm(H.t()).t())
+        #K = Kt.t()
+        
         #print("X :",Kt)
-        K = Kt.t()
+        K = (P.mm(H.t())).mm(S_inv)
         dx = K.mv(r.view(-1))
         #print("r :",r)
         #print("dx :", dx)
@@ -270,6 +300,8 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         dv = dxi[:, 0]
         dp = dxi[:, 1]
         Rot_up = dR.mm(Rot)
+        #print("dp : ", dp)
+        #print("dv : ", dv)
         v_up = dR.mv(v) + dv
         p_up = dR.mv(p) + dp
 

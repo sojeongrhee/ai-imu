@@ -223,14 +223,14 @@ class NUMPYIEKF:
         Omega = self.skew(u[:3] - b_omega)
 
         # Jacobian w.r.t. car frame
-        H_v_imu = Rot_c_i.T.dot(self.skew(v_imu))
+        H_v_imu = self.skew(v_imu + Omega.dot(t_c_i))
         H_t_c_i = -self.skew(t_c_i)
 
         H = np.zeros((2, self.P_dim))
         H[:, 3:6] = Rot_body.T[1:]
-        H[:, 15:18] = H_v_imu[1:]
-        H[:, 9:12] = H_t_c_i[1:]
-        H[:, 18:21] = -Omega[1:]
+        H[:, 9:12] = (Rot_c_i.T.dot(H_t_c_i))[1:]
+        H[:, 15:18] = (Rot_c_i.T.dot(H_v_imu))[1:]
+        H[:, 18:21] = (Rot_c_i.T.dot(Omega))[1:]
         r = - v_body[1:]
         R = np.diag(measurement_cov)
         Rot_up, v_up, p_up, b_omega_up, b_acc_up, Rot_c_i_up, t_c_i_up, P_up = \
@@ -239,13 +239,14 @@ class NUMPYIEKF:
 
     @staticmethod
     def state_and_cov_update(Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P, H, r, R):
+        
         S = H.dot(P).dot(H.T) + R
         #print("P :", P)
         #print("S :", S)
         K = (np.linalg.solve(S, P.dot(H.T).T)).T
         dx = K.dot(r)
-        #print("K :", K)
-        #print("dx : ",dx)
+        print("K :", K)
+        print("dx : ",dx)
         dR, dxi = NUMPYIEKF.sen3exp(dx[:9])
         dv = dxi[:, 0]
         dp = dxi[:, 1]

@@ -17,7 +17,7 @@ from utils_numpy_filter import NUMPYIEKF as IEKF
 from utils import prepare_data
 from train_torch_filter import train_filter
 from utils_plot import results_filter
-
+import wandb
 
 def launch(args):
     if args.read_data:
@@ -41,7 +41,7 @@ class USVParameters(IEKF.Parameters):  # 클래스 이름 변경
     cov_omega = 2e-4
     cov_acc = 1e-3
     cov_b_omega = 1e-8
-    cov_b_acc = 1e-6
+    cov_b_acc = 1e-3
     cov_Rot_c_i = 1e-8
     cov_t_c_i = 1e-8
     cov_Rot0 = 1e-6
@@ -50,8 +50,8 @@ class USVParameters(IEKF.Parameters):  # 클래스 이름 변경
     cov_b_acc0 = 1e-3
     cov_Rot_c_i0 = 1e-5
     cov_t_c_i0 = 1e-2
-    cov_lat = 1e5
-    cov_up = 1e6
+    cov_lat = 100
+    cov_up = 1
 
     #1 sec
     n_normalize_rot = 100
@@ -76,9 +76,9 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
     #odometry_benchmark["merged_output_processed_1"] = [0, 25406]
     #odometry_benchmark["merged_output_processed_2"] = [0, 25696]
     #odometry_benchmark["merged_output_processed_3"] = [0, 25981]
-    odometry_benchmark["merged_output_py_final_1"] = [0, 88923]
-    odometry_benchmark["merged_output_py_final_2"] = [0, 89933]
-    odometry_benchmark["merged_output_py_final_3"] = [0, 90933]
+    odometry_benchmark["merged_output_py_bias_1"] = [0, 88923]
+    odometry_benchmark["merged_output_py_bias_2"] = [0, 89933]
+    #odometry_benchmark["merged_output_py_bias_3"] = [0, 90933]
 
     def __init__(self, args):
         super(USVDataset, self).__init__(args)
@@ -92,9 +92,9 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
         #self.datasets_train_filter["merged_output_processed_3"] = [0, 25981]
         #self.datasets_validatation_filter['merged_output_processed_1'] = [0, 25406]
 
-        self.datasets_train_filter["merged_output_py_final_2"] = [10000, 70000]
-        self.datasets_train_filter["merged_output_py_final_3"] = [30000, 70000]
-        self.datasets_validatation_filter['merged_output_py_final_1'] = [0, 88923]
+        self.datasets_train_filter["merged_output_py_bias_2"] = [10000, 70000]
+        #self.datasets_train_filter["merged_output_py_bias_3"] = [30000, 70000]
+        self.datasets_validatation_filter['merged_output_py_bias_1'] = [0, 88923]
         self.add_extra = args.add_extra
 
     @staticmethod
@@ -111,7 +111,8 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
         
         # Define the packet structure with a valid identifier for time
         if add_extra : 
-            OxtsPacket = namedtuple('OxtsPacket', 'time, lat, lon, alt, roll, pitch, yaw, vn, ve, vu, ax, ay, az, wx, wy, wz, bax, bay, baz, bgx, bgy, bgz, cov0, cov1, cov2, cov3, cov4, cov5, cov6, cov7, cov8')
+            #OxtsPacket = namedtuple('OxtsPacket', 'time, lat, lon, alt, roll, pitch, yaw, vn, ve, vu, ax, ay, az, wx, wy, wz, bax, bay, baz, bgx, bgy, bgz, cov0, cov1, cov2, cov3, cov4, cov5, cov6, cov7, cov8')
+            OxtsPacket = namedtuple('OxtsPacket', 'time, lat, lon, alt, roll, pitch, yaw, vn, ve, vu, ax, ay, az, wx, wy, wz, bax, bay, baz, bgx, bgy, bgz')
         else : 
             OxtsPacket = namedtuple('OxtsPacket', 'time, lat, lon, alt, roll, pitch, yaw, vn, ve, vu, ax, ay, az, wx, wy, wz')
 
@@ -127,10 +128,13 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
             # Create the OxtsPacket including the 'time' (formerly '%time')
 
             if add_extra : 
+                # packet = OxtsPacket(row['%time'], row['lat'], row['lon'], row['alt'], row['roll'], row['pitch'], row['yaw'],
+                #                     row['vn'], row['ve'], row['vu'], row['ax'], row['ay'], row['az'],
+                #                     row['wx'], row['wy'], row['wz'], row['bax'], row['bay'], row['baz'], row['bgx'], row['bgy'], row['bgz'],
+                #                     row['cov0'],row['cov1'],row['cov2'],row['cov3'],row['cov4'],row['cov5'],row['cov6'],row['cov7'],row['cov8'])
                 packet = OxtsPacket(row['%time'], row['lat'], row['lon'], row['alt'], row['roll'], row['pitch'], row['yaw'],
                                     row['vn'], row['ve'], row['vu'], row['ax'], row['ay'], row['az'],
-                                    row['wx'], row['wy'], row['wz'], row['bax'], row['bay'], row['baz'], row['bgx'], row['bgy'], row['bgz'],
-                                    row['cov0'],row['cov1'],row['cov2'],row['cov3'],row['cov4'],row['cov5'],row['cov6'],row['cov7'],row['cov8'])
+                                    row['wx'], row['wy'], row['wz'], row['bax'], row['bay'], row['baz'], row['bgx'], row['bgy'], row['bgz'])
             else : 
                 packet = OxtsPacket(row['%time'], row['lat'], row['lon'], row['alt'], row['roll'], row['pitch'], row['yaw'],
                                     row['vn'], row['ve'], row['vu'], row['ax'], row['ay'], row['az'],
@@ -144,7 +148,8 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
     def get_extra_data(self, i):
         if self.add_extra : 
             pickle_dict = self[self.datasets.index(i) if type(i) != int else i]
-            return pickle_dict['u_bias'], pickle_dict['cov_gt']
+            #return pickle_dict['u_bias'], pickle_dict['cov_gt']
+            return pickle_dict['u_bias']
         else :
             return None
 
@@ -186,8 +191,10 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
                 p_gt[k, 0] = oxts_k[0].lat  # Position from the pose matrix
                 p_gt[k, 1] = oxts_k[0].lon
                 p_gt[k, 2] = oxts_k[0].alt
-                v_gt[k, 0] = oxts_k[0].ve
-                v_gt[k, 1] = oxts_k[0].vn
+                #### !!!!!!!!!!!! ####
+                # vn, ve, vu order
+                v_gt[k, 0] = oxts_k[0].vn
+                v_gt[k, 1] = oxts_k[0].ve
                 v_gt[k, 2] = oxts_k[0].vu
                 ang_gt[k, 0] = oxts_k[0].roll
                 ang_gt[k, 1] = oxts_k[0].pitch
@@ -198,9 +205,9 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
                 if add_extra : 
                     a_bias[k, :] = [oxts_k[0].bax, oxts_k[0].bay, oxts_k[0].baz]
                     gyro_bias[k, :] = [oxts_k[0].bgx, oxts_k[0].bgy, oxts_k[0].bgz]
-                    cov_gt[k, :] = [oxts_k[0].cov0, oxts_k[0].cov1, oxts_k[0].cov2, \
-                                    oxts_k[0].cov3, oxts_k[0].cov4, oxts_k[0].cov5, \
-                                    oxts_k[0].cov6, oxts_k[0].cov7, oxts_k[0].cov8 ]
+                    # cov_gt[k, :] = [oxts_k[0].cov0, oxts_k[0].cov1, oxts_k[0].cov2, \
+                    #                 oxts_k[0].cov3, oxts_k[0].cov4, oxts_k[0].cov5, \
+                    #                 oxts_k[0].cov6, oxts_k[0].cov7, oxts_k[0].cov8 ]
                     
             # Normalize timestamps
             t0 = t[0]
@@ -216,10 +223,14 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
             if add_extra  : 
                 u_bias = np.concatenate((a_bias, gyro_bias), -1)
                 u_bias = torch.from_numpy(u_bias).float()
-                cov_gt = torch.from_numpy(cov_gt).float()
+                #cov_gt = torch.from_numpy(cov_gt).float()
+                # mondict = {
+                #     't': t, 'p_gt': p_gt, 'ang_gt': ang_gt, 'v_gt': v_gt,
+                #     'u': u, 'name': name, 't0': t0, 'u_bias':u_bias, 'cov_gt':cov_gt
+                # }
                 mondict = {
                     't': t, 'p_gt': p_gt, 'ang_gt': ang_gt, 'v_gt': v_gt,
-                    'u': u, 'name': name, 't0': t0, 'u_bias':u_bias, 'cov_gt':cov_gt
+                    'u': u, 'name': name, 't0': t0, 'u_bias':u_bias
                 }
             else : 
                 mondict = {
@@ -312,18 +323,18 @@ def test_filter(args, dataset):
 
 
 class USVArgs:  # 클래스 이름 및 경로 수정
-    path_data_base = "../dataset/sheco_data/py_data"
+    path_data_base = "../dataset/sheco_data/py_bias"
     path_data_save = "../dataset/merged_output"
     path_results = "../results"
     path_temp = "../temp"
     epochs = 40000
-    seq_dim = 100*5
+    seq_dim = 100*10
 
     # training, cross-validation and test dataset
     # cross_validation_sequences = ['merged_output_processed_1']
     # test_sequences = ['merged_output_processed_1']
-    cross_validation_sequences = ['merged_output_py_final_1']
-    test_sequences = ['merged_output_py_final_1']
+    cross_validation_sequences = ['merged_output_py_bias_1']
+    test_sequences = ['merged_output_py_bias_1']
     continue_training = False
 
     # choose what to do
@@ -335,12 +346,19 @@ class USVArgs:  # 클래스 이름 및 경로 수정
     parameter_class = USVParameters  # 클래스 이름에 맞게 수정
 
     # include bias, covariance  
-    add_extra = False
+    add_extra = True
 
 if __name__ == '__main__':
+    
     #torch.set_default_device('cuda') 
     torch.set_default_tensor_type('torch.cuda.DoubleTensor')
     args = USVArgs()  # USVArgs의 인스턴스 생성
+    
+    config = {"epochs": args.epochs, "seqdim":args.seq_dim, "cov_up":args.parameter_class.cov_up, "cov_lat":args.parameter_class.cov_lat}
+    wandb.init(
+        project="ai-imu",
+        config=config,
+        )
     dataset = USVDataset(args)  # dataset 인스턴스 생성
     launch(args)  # 'args' 객체를 전달
 
