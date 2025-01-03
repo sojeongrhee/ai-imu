@@ -9,6 +9,10 @@ import pdb
 from collections import defaultdict
 import json
 
+'''
+Function to synchronize GPS, IMU data into 28Hz
+Not recommended to use
+'''
 def run_sample(datapath, exp_list) :
     #choose ref_step to balance number of num[0], num[1]
         
@@ -264,6 +268,9 @@ def run_sample(datapath, exp_list) :
         total_imu[exp_num] = from_imu
     return total, total_gps, total_imu
 
+'''
+From 28Hz sampled csv, merge it with imu data to make it into a single row
+'''
 def merge_ekf_imu(exp_list, processed_dict, datapath) :      
 
        
@@ -335,6 +342,11 @@ def merge_ekf_imu(exp_list, processed_dict, datapath) :
 
         # Display the first few rows
         print(loaded_df.head())
+
+'''
+Merge bias added ekf_final csv with imu data into a single row
+Not recommended to use because ekf_final csv is wrong
+'''
 
 def merge_final(exp_list, processed_dict, datapath) :      
        
@@ -423,6 +435,10 @@ def merge_final(exp_list, processed_dict, datapath) :
         # Display the first few rows
         print(loaded_df.head())
 
+'''
+Merge ekf_py csv generated with inrol_filter
+with imu data into a single row
+'''
 def merge_ekf_py_imu(exp_list,processed_dict,datapath) :      
        
     for exp_num in exp_list : 
@@ -493,9 +509,89 @@ def merge_ekf_py_imu(exp_list,processed_dict,datapath) :
         # Display the first few rows
         print(loaded_df.head())
 
+'''
+Merge bias added ekf_py csv generated with inrol_filter
+with imu data into a single row
+'''
 
-"""
-preprocess rosbag generated ekf sample
+def merge_ekf_py_imu_bias(exp_list,processed_dict,datapath) :      
+       
+    for exp_num in exp_list : 
+        ekf_df = pd.read_csv(os.path.join(datapath,'ekf_py_fixed_bias_{}.csv'.format(exp_num)))
+        imu_df = pd.read_csv(os.path.join(datapath,'imu{}.bag'.format(exp_num))) 
+        # Extract the relevant fields
+        merged_data = []
+        processed_idx = processed_dict[exp_num]
+        for i in processed_idx :
+            ekf_timestamp_ns = ekf_df.iloc[i[0],0]
+            ekf_row = ekf_df.iloc[i[1]]
+            imu_row = imu_df.iloc[i[2]]
+            merged_row = {
+                #'%time': datetime.fromtimestamp(ekf_timestamp_ns / 1e9).isoformat(),
+                '%time': ekf_timestamp_ns,
+                'lat': ekf_row['field.pos_x'],
+                'lon': ekf_row['field.pos_y'],
+                'alt': ekf_row['field.pos_z'],
+                'roll': ekf_row['field.ori_r'],
+                'pitch': ekf_row['field.ori_p'],
+                'yaw': ekf_row['field.ori_y'],
+                'vn': ekf_row['field.vel_x'],
+                've': ekf_row['field.vel_y'],
+                'vu': ekf_row['field.vel_z'],
+                'ax': imu_row['field.linear_acceleration.x'],
+                'ay': imu_row['field.linear_acceleration.y'],
+                'az': imu_row['field.linear_acceleration.z'],
+                'af': imu_row['field.linear_acceleration.x'],  # Duplicates as per instruction
+                'al': imu_row['field.linear_acceleration.y'],  # Duplicates as per instruction
+                'au': imu_row['field.linear_acceleration.z'],  # Duplicates as per instruction
+                'wx': imu_row['field.angular_velocity.x'],
+                'wy': imu_row['field.angular_velocity.y'],
+                'wz': imu_row['field.angular_velocity.z'],
+                'wf': imu_row['field.angular_velocity.x'],  # Duplicates as per instruction
+                'wl': imu_row['field.angular_velocity.y'],  # Duplicates as per instruction
+                'wu': imu_row['field.angular_velocity.z'],  # Duplicates as per instruction
+                'bax':ekf_row['field.b_acc_x'],
+                'bay':ekf_row['field.b_acc_y'],
+                'baz':ekf_row['field.b_acc_z'],
+                'bgx':ekf_row['field.b_gyr_x'],
+                'bgy':ekf_row['field.b_gyr_y'],
+                'bgz':ekf_row['field.b_gyr_z'],
+            }
+            #pdb.set_trace()
+            merged_data.append(merged_row)
+            
+            
+        print("merged data: ",len(merged_data))
+        # Convert merged data to a DataFrame with the desired column order
+        column_order = [
+            '%time', 'lat', 'lon', 'alt', 'roll', 'pitch', 'yaw', 
+            'vn', 've', 'vu', 'ax', 'ay', 'az', 'af', 'al', 'au', 
+            'wx', 'wy', 'wz', 'wf', 'wl', 'wu','bax','bay','baz','bgx','bgy','bgz'
+        ]
+
+        merged_df = pd.DataFrame(merged_data, columns=column_order)
+
+        # Save the merged data to a new CSV file
+        merged_df.to_csv(os.path.join(datapath,'merged_output_py_fixed_bias_{}.csv'.format(exp_num)), index=False)
+
+        print("Merged CSV file created successfully!")
+
+        # Save the DataFrame as a pickle file
+        with open(os.path.join(datapath,'merged_output_py_fixed_bias_{}.p'.format(exp_num)), 'wb') as f:
+            pickle.dump(merged_df, f)
+
+        print("Merged CSV file created and saved as a pickle file successfully!")
+
+
+        # Load the pickle file
+        with open(os.path.join(datapath,'merged_output_py_fixed_bias_{}.p'.format(exp_num)), 'rb') as f:
+            loaded_df = pickle.load(f)
+
+        # Display the first few rows
+        print(loaded_df.head())
+
+'''
+preprocess rosbag generated ekf py sample
 1. added bias data
 2. offset for stopped points?
 3. first ekf from gps 
@@ -506,7 +602,7 @@ preprocess rosbag generated ekf sample
 - output : 9, 7, 9
 - ext : 9, 7, 9
 - ext rev : 9, 7, 9 
-"""
+'''
 def run_ekf(datapath, exp_list, only_imu = False) : 
     start_seq = {1: [3462, 75407], 2: [13922, 281868], 3:[23490, 470123]}
     total = {}
@@ -605,9 +701,12 @@ def run_ekf(datapath, exp_list, only_imu = False) :
         total_imu[exp_num] = from_imu
     return total, total_gps, total_imu
 
-## from ekf_final get gyro, acc bias
-## duplicate gyro, bias for seq less than that
-## add that to ekf_py
+'''
+Function to add ekf_py with bias 
+from ekf_final get gyro, acc bias
+duplicate gyro, bias for seq less than that
+add that to ekf_py
+'''
 def add_acc_bias(datapath, exp_list) : 
     start_seq = {1: 75409, 2: 281870, 3: 470125}
     for exp_num in exp_list : 
@@ -696,10 +795,12 @@ if __name__=="__main__" :
     data_path = "../dataset/sheco_data"
     exp_list = [1,2,3]
 
-    # total, total_gps, total_imu = run_ekf(data_path, exp_list, True)
+    total, total_gps, total_imu = run_ekf(data_path, exp_list, True)
     # #merge_final(exp_list, total, data_path)
     # #merge_gps_imu(exp_list,total, total_gps,data_path)
-    # merge_ekf_py_imu(exp_list, total, data_path)
+
+    #merge_ekf_py_imu(exp_list, total, data_path)
+    merge_ekf_py_imu_bias(exp_list, total, data_path)
     # # for k,v in total_gps.items() : 
     # #     v_ = {}
     # #     for k_tmp,v_tmp in v.items() :
@@ -707,4 +808,4 @@ if __name__=="__main__" :
     # #     with open("from_gps{}.json".format(k),"w") as json_file : 
     # #         json.dump(v_, json_file)
     
-    add_acc_bias(data_path, exp_list)
+    #add_acc_bias(data_path, exp_list)

@@ -3,6 +3,11 @@ results/
 temp/delta_p.p
 temp/iekfnets.p
 temp/normalize_factors.p
+temp2/
+temp3/
+temp4/
+test/
+test2/
 src/__pycache__
 src/plot
 src/*.txt
@@ -10,4 +15,4 @@ src/res.txt
 dataset/sheco_data/merged_output_py_200_final1.csv
 dataset/sheco_data/merged_output_py_200_final2.csv
 dataset/sheco_data/merged_output_py_200_final3.csv
-src/wandb
+src/wandb\

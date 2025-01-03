@@ -40,7 +40,10 @@ def compute_delta_p(Rot, p):
     dp = dp.cpu()
     print("dp : ", dp, "p shape: ",p.shape[0])
     distances[1:] = dp.norm(dim=1).cumsum(0).numpy()
-    # print("distances : ", distances[1:])
+    # exp1 40.98094177246094 82.5008316040039 124.03189086914062
+    # exp2 82.50808715820312 145.27401733398438 199.38491821289062
+    # exp3 63.61306381225586 135.75900268554688 198.80711364746094
+    print("distances : ", distances[len(distances)//4], distances[len(distances)//2],distances[len(distances)//4*3])
 
     """
         ########################### Important Notice ############################## 
@@ -51,7 +54,8 @@ def compute_delta_p(Rot, p):
         Notice 2 : 1/10 scale로 하면 학습 loop는 돌아가나 loss가 제대로 나오지 않는 문제가 있음
     """
     # seq_lengths = [10, 20, 30, 40, 50, 60, 70, 80]
-    seq_lengths = [0.05, 0.1, 0.15, 0.2]
+    #seq_lengths = [0.05, 0.1, 0.15, 0.2]
+    seq_lengths = [0.5, 1, 1.5, 2, 2.5, 3]
     # seq_lengths = [10, 11, 12, 13, 14, 15, 16, 17]
     k_max = int(Rot.shape[0] / step_size) - 1
     idx_diff = [[np.inf,-1]]*len(seq_lengths)
@@ -81,7 +85,8 @@ def compute_delta_p(Rot, p):
     delta_p = Rot[idxs_0].transpose(-1, -2).matmul(
          ((p[idxs_end] - p[idxs_0]).double()).unsqueeze(-1)).squeeze()
     list_rpe[2] = delta_p
-    #print("list_rpe : ", list_rpe[0], list_rpe[1], list_rpe[2])
+    print("list_rpe : ", len(list_rpe[0]), len(list_rpe[1]), len(list_rpe[2]))
+    print(list_rpe[0][-5:], list_rpe[1][-5:])
     return list_rpe
 
 
@@ -103,7 +108,7 @@ def train_filter(args, dataset):
             'Grad Norm' : grad_norm,
             'Start idx' : N0,
         })
-        if epoch % 100 == 0 : 
+        if epoch % 20 == 0 : 
             print("Validate filter")
             test_loss = validate_filter(args, dataset, iekf, args.seq_dim)
             wandb.log({
@@ -116,12 +121,15 @@ def validate_filter(args, dataset, iekf, seq_dim) :
     iekf.eval()
     total_loss= 0
     for i, (dataset_name, Ns) in enumerate(dataset.datasets_validatation_filter.items()):
-        t, ang_gt, p_gt, v_gt, u, N0, b_acc_gt = prepare_data_filter(dataset, dataset_name, Ns,
+        tmp = 0
+        for _ in range(10) : 
+            t, ang_gt, p_gt, v_gt, u, N0, b_acc_gt = prepare_data_filter(dataset, dataset_name, Ns,
                                                                   iekf, seq_dim, add_extra=True)
-        #print("t, ang_gt, p_gt, v_gt, u :", t, ang_gt, p_gt, v_gt, u )
-        loss = mini_batch_step(dataset, dataset_name, iekf,
+            #print("t, ang_gt, p_gt, v_gt, u :", t, ang_gt, p_gt, v_gt, u )
+            loss = mini_batch_step(dataset, dataset_name, iekf,
                                dataset.list_rpe_validation[dataset_name], t, ang_gt, p_gt, v_gt, u, N0, b_acc_gt)
-        total_loss += loss
+            tmp += loss
+        total_loss += tmp / 10
     return total_loss.cpu()
 
 def prepare_filter(args, dataset):
@@ -165,10 +173,10 @@ def prepare_loss_data(args, dataset):
         #p_gt = p_gt.double()
         p_gt = p_gt.cuda()
         Rot_gt = torch.zeros(Ns[1], 3, 3)
-        for k in range(Ns[1]):
+        for k in range(Ns[0],Ns[1]):
             ang_k = ang_gt[k]
             Rot_gt[k] = TORCHIEKF.from_rpy(ang_k[0], ang_k[1], ang_k[2]).double()
-        list_rpe[dataset_name] = compute_delta_p(Rot_gt[:Ns[1]], p_gt[:Ns[1]])
+        list_rpe[dataset_name] = compute_delta_p(Rot_gt[Ns[0]:], p_gt[Ns[0]:Ns[1]])
 
     list_rpe_validation = {}
     for dataset_name, Ns in dataset.datasets_validatation_filter.items():
@@ -176,10 +184,10 @@ def prepare_loss_data(args, dataset):
         #p_gt = p_gt.double()
         p_gt = p_gt.cuda()
         Rot_gt = torch.zeros(Ns[1], 3, 3)
-        for k in range(Ns[1]):
+        for k in range(Ns[0],Ns[1]):
             ang_k = ang_gt[k]
             Rot_gt[k] = TORCHIEKF.from_rpy(ang_k[0], ang_k[1], ang_k[2]).double()
-        list_rpe_validation[dataset_name] = compute_delta_p(Rot_gt[:Ns[1]], p_gt[:Ns[1]])
+        list_rpe_validation[dataset_name] = compute_delta_p(Rot_gt[Ns[0]:], p_gt[Ns[0]:Ns[1]])
     
     list_rpe_ = copy.deepcopy(list_rpe)
     dataset.list_rpe = {}
@@ -322,7 +330,8 @@ def prepare_data_filter(dataset, dataset_name, Ns, iekf, seq_dim, add_extra=Fals
     b_acc_gt = None
     if add_extra :
         u_bias  = dataset.get_extra_data(dataset_name)
-        b_acc_gt = u_bias[N0:N,:3].double().to('cuda')
+        u_bias_ = u_bias[Ns[0]:Ns[1],:]
+        b_acc_gt = u_bias_[N0:N,:3].double().to('cuda')
     return t, ang_gt, p_gt, v_gt, u, N0, b_acc_gt
 
 

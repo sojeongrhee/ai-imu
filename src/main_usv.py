@@ -38,20 +38,33 @@ class USVParameters(IEKF.Parameters):  # 클래스 이름 변경
     # gravity vector
     #g = np.array([0, 0, -9.80655])
     g = np.array([0, 0, -9.81])
-    cov_omega = 2e-4
-    cov_acc = 1e-3
-    cov_b_omega = 1e-8
-    cov_b_acc = 1e-3
-    cov_Rot_c_i = 1e-8
-    cov_t_c_i = 1e-8
-    cov_Rot0 = 1e-6
-    cov_v0 = 1e-1
-    cov_b_omega0 = 1e-8
-    cov_b_acc0 = 1e-3
-    cov_Rot_c_i0 = 1e-5
-    cov_t_c_i0 = 1e-2
-    cov_lat = 100
-    cov_up = 1
+
+
+    p_scale = 5
+    q_scale = 10
+    # cov_omega = 2e-4 # gyr_noise_stddev ** 2 = 0.005 ** 2
+    cov_omega = 2.5e-10 * q_scale 
+    # cov_acc = 1e-3 # acc_noise_stddev ** 2 = 0.05 ** 2
+    cov_acc = 2.5e-10 * q_scale 
+    # cov_b_omega = 1e-8 # gyro bias drift
+    cov_b_omega = 1e-8 * q_scale
+    # cov_b_acc = 1e-3 # acc bias drift
+    cov_b_acc = 1e-4 * q_scale 
+    #cov_Rot_c_i = 1e-8
+    cov_Rot_c_i = 1e-4 
+    cov_t_c_i = 1e-4
+    cov_Rot0 = 1e-3 * p_scale
+    cov_v0 = 1e-6 * p_scale
+    # cov_b_omega0 = 1e-8
+    cov_b_omega0 = 1e-8 * p_scale
+    # cov_b_acc0 = 1e-3
+    cov_b_acc0 = 0.1 * p_scale 
+    #cov_Rot_c_i0 = 1e-5
+    cov_Rot_c_i0 = 1e-3
+    cov_t_c_i0 = 1e-5
+
+    cov_lat = 1
+    cov_up = 10
 
     #1 sec
     n_normalize_rot = 100
@@ -76,9 +89,9 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
     #odometry_benchmark["merged_output_processed_1"] = [0, 25406]
     #odometry_benchmark["merged_output_processed_2"] = [0, 25696]
     #odometry_benchmark["merged_output_processed_3"] = [0, 25981]
-    odometry_benchmark["merged_output_py_bias_1"] = [0, 88923]
-    odometry_benchmark["merged_output_py_bias_2"] = [0, 89933]
-    #odometry_benchmark["merged_output_py_bias_3"] = [0, 90933]
+    odometry_benchmark["merged_output_py_fixed_bias_1"] = [0, 88923]
+    odometry_benchmark["merged_output_py_fixed_bias_2"] = [0, 89933]
+    odometry_benchmark["merged_output_py_fixed_bias_3"] = [0, 90933]
 
     def __init__(self, args):
         super(USVDataset, self).__init__(args)
@@ -92,9 +105,9 @@ class USVDataset(BaseDataset):  # 데이터셋 클래스 유지
         #self.datasets_train_filter["merged_output_processed_3"] = [0, 25981]
         #self.datasets_validatation_filter['merged_output_processed_1'] = [0, 25406]
 
-        self.datasets_train_filter["merged_output_py_bias_2"] = [10000, 70000]
-        #self.datasets_train_filter["merged_output_py_bias_3"] = [30000, 70000]
-        self.datasets_validatation_filter['merged_output_py_bias_1'] = [0, 88923]
+        self.datasets_train_filter["merged_output_py_fixed_bias_2"] = [10000, 70000]
+        self.datasets_train_filter["merged_output_py_fixed_bias_3"] = [10000, 70000]
+        self.datasets_validatation_filter['merged_output_py_fixed_bias_1'] = [10000, 70000]
         self.add_extra = args.add_extra
 
     @staticmethod
@@ -323,18 +336,18 @@ def test_filter(args, dataset):
 
 
 class USVArgs:  # 클래스 이름 및 경로 수정
-    path_data_base = "../dataset/sheco_data/py_bias"
+    path_data_base = "../dataset/sheco_data/py_fixed"
     path_data_save = "../dataset/merged_output"
     path_results = "../results"
-    path_temp = "../temp"
+    path_temp = "../temp3"
     epochs = 40000
     seq_dim = 100*10
 
     # training, cross-validation and test dataset
     # cross_validation_sequences = ['merged_output_processed_1']
     # test_sequences = ['merged_output_processed_1']
-    cross_validation_sequences = ['merged_output_py_bias_1']
-    test_sequences = ['merged_output_py_bias_1']
+    cross_validation_sequences = ['merged_output_py_fixed_bias_1']
+    test_sequences = ['merged_output_py_fixed_bias_1']
     continue_training = False
 
     # choose what to do
@@ -354,7 +367,7 @@ if __name__ == '__main__':
     torch.set_default_tensor_type('torch.cuda.DoubleTensor')
     args = USVArgs()  # USVArgs의 인스턴스 생성
     
-    config = {"epochs": args.epochs, "seqdim":args.seq_dim, "cov_up":args.parameter_class.cov_up, "cov_lat":args.parameter_class.cov_lat}
+    config = {"epochs": args.epochs, "seqdim":args.seq_dim, "cov_up":args.parameter_class.cov_up, "cov_lat":args.parameter_class.cov_lat, "path_temp": args.path_temp}
     wandb.init(
         project="ai-imu",
         config=config,

@@ -10,6 +10,7 @@ from main_usv import USVDataset, USVArgs
 from utils_torch_filter import TORCHIEKF
 from utils import prepare_data
 from utils_numpy_filter import NUMPYIEKF
+from train_torch_filter import prepare_loss_data
 
 def plot_gt(args, dataset) : 
     # 16599, 53663
@@ -262,11 +263,54 @@ def plot_dist_sc() :
         print(len(list_rpe[0]))
         print(num)
 
+def plot_bias2():
+    data_path = "../dataset/sheco_data"
+    exp_list = [1,2,3]
+    for exp_num in exp_list :    
+        
+        ekf_name = "ekf_py_fixed_bias_{}.csv".format(exp_num)
+        gt_name = "imu{}.bag".format(exp_num)
+        # orientation, bias gyro and bias accelerometer
+        df_gt = pd.read_csv(os.path.join(data_path, gt_name))
+        gt_ = np.array(df_gt.iloc[:,0]).reshape(-1,1)
+        gt_ = gt_ -gt_[0]
+        #gt_acc = np.array(df_gt.iloc[:,29:32]).reshape(-1,3)
+        #gt_gyr = np.array(df_gt.iloc[:,17:20]).reshape(-1,3)
+        ang_gt = np.array(df_gt.iloc[:,7:10]).reshape(-1,3)
+        df_ekf = pd.read_csv(os.path.join(data_path, ekf_name))
+        t_ = np.array(df_ekf.iloc[:,0]).reshape(-1,1)
+        t_ = t_- t_[0]
+        ang = np.array(df_ekf.iloc[:,8:11]).reshape(-1,3)
+        b_omega = np.array(df_ekf.iloc[:,14:17]).reshape(-1,3)
+        b_acc = np.array(df_ekf.iloc[:,11:14]).reshape(-1,3)
+        fig2, axs2 = plt.subplots(3, 1, sharex=True, figsize=(20, 10))
+        axs2[0].plot(gt_, ang_gt)
+        axs2[0].plot(t_, ang)
+        axs2[1].plot(t_, b_omega)
+        axs2[2].plot(t_, b_acc)
+        axs2[0].set(xlabel='time (s)', ylabel=r'$\phi_n, \theta_n, \psi_n$ (rad)',
+                    title="Orientation")
+        axs2[1].set(xlabel='time (s)', ylabel=r'$\mathbf{b}_{n}^{\mathbf{\omega}}$ (rad/s)',
+                    title="Bias gyro")
+        axs2[2].set(xlabel='time (s)', ylabel=r'$\mathbf{b}_{n}^{\mathbf{a}}$ (m/$\mathrm{s}^2$)',
+                    title="Bias accelerometer")
+        axs2[0].grid()
+        axs2[1].grid()
+        axs2[2].grid()
+        axs2[0].legend([r'$\phi_n^x$', r'$\theta_n^y$', r'$\psi_n^z$', r'$\hat{\phi}_n^x$',
+                        r'$\hat{\theta}_n^y$', r'$\hat{\psi}_n^z$'])
+        axs2[1].legend(
+            ['$b_n^x$', '$b_n^y$', '$b_n^z$', '$\hat{b}_n^x$', '$\hat{b}_n^y$', '$\hat{b}_n^z$'])
+        axs2[2].legend(
+            ['$b_n^x$', '$b_n^y$', '$b_n^z$', '$\hat{b}_n^x$', '$\hat{b}_n^y$', '$\hat{b}_n^z$'])
+        fig_name = "exp_{}_orientation_bias".format(exp_num)
+        fig2.savefig(os.path.join("./plot", fig_name + ".png"))
+        
 def plot_bias() :
     data_path = "../dataset/sheco_data"
     exp_list = [1,2,3]
     for exp_num in exp_list : 
-        ekf_name = "ekf_ext_rev_{}.csv".format(exp_num)
+        ekf_name = "ekf_py_fixed_{}.csv".format(exp_num)
         gt_name = "imu{}.bag".format(exp_num)
         df_gt = pd.read_csv(os.path.join(data_path, gt_name))
         gt_ = np.array(df_gt.iloc[:,0]).reshape(-1,1)
@@ -391,13 +435,68 @@ def plot_vbody() :
         ax1[2].legend(['v_body', 'v_body_b','w_meas'])
         fig1.savefig(os.path.join("./plot", "exp{}_vbody.png".format(exp_num)))
         
+
+
+def plot_delta_p(args, dataset) : 
+    prepare_loss_data(args,dataset)
+    for dataset_name, Ns in dataset.datasets_train_filter.items():
+        list_rpe = dataset.list_rpe[dataset_name]
+        t, ang_gt, p_gt, v_gt, u = prepare_data(args, dataset, dataset_name, 0)
+        Rot_gt = torch.zeros(Ns[1]-Ns[0], 3, 3)
+        for k in range(Ns[1]-Ns[0]):
+            ang_k = ang_gt[k]
+            Rot_gt[k] = TORCHIEKF.from_rpy(ang_k[0], ang_k[1], ang_k[2]).double()
+        #Rot_gt = Rot_gt[::10]
+        #p_gt = p_gt[::10]
+        start = np.zeros(len(list_rpe[0]))
+        end = np.zeros(len(list_rpe[0]))
+        dist = np.zeros(len(list_rpe[0]))
+        for i in range(len(list_rpe[0])) : 
+            start[i] = Ns[0]+list_rpe[0][i]
+            end[i] = Ns[0]+list_rpe[1][i] 
+            dist[i] = torch.norm(list_rpe[2][i])
+        fig1, ax1 = plt.subplots(2,1, sharex=True, figsize=(20, 10))
+        idx = np.arange(len(list_rpe[0]))
+        ax1[0].plot(idx, end-start)
+        #ax1[0].plot(idx, end)
+        ax1[1].plot(idx, dist)
+        ax1[0].set(xlabel='index',ylabel='index',title="start and end index diff")
+        ax1[1].set(xlabel='index',ylabel='$distance (m)$',title="distance")
+        fig1.savefig(os.path.join("./plot", "exp{}_delta_p.png".format(dataset_name)))
+    
+    for dataset_name, Ns in dataset.datasets_validatation_filter.items():
+        list_rpe = dataset.list_rpe_validation[dataset_name]
+        t, ang_gt, p_gt, v_gt, u = prepare_data(args, dataset, dataset_name, 0)
+        Rot_gt = torch.zeros(Ns[1]-Ns[0], 3, 3)
+        for k in range(Ns[1]-Ns[0]):
+            ang_k = ang_gt[k]
+            Rot_gt[k] = TORCHIEKF.from_rpy(ang_k[0], ang_k[1], ang_k[2]).double()
+        #Rot_gt = Rot_gt[::10]
+        #p_gt = p_gt[::10]
+        start = np.zeros(len(list_rpe[0]))
+        end = np.zeros(len(list_rpe[0]))
+        dist = np.zeros(len(list_rpe[0]))
+        for i in range(len(list_rpe[0])) : 
+            start[i] = Ns[0]/10+list_rpe[0][i]
+            end[i] = Ns[0]/10+list_rpe[1][i]
+            dist[i] = torch.norm(list_rpe[2][i])
+        fig1, ax1 = plt.subplots(2,1, sharex=True, figsize=(20, 10))
+        idx = np.arange(len(list_rpe[0]))
+        ax1[0].plot(idx, end-start)
+        #ax1[0].plot(idx, end)
+        ax1[1].plot(idx, dist)
+        ax1[0].set(xlabel='index',ylabel='index',title="start and end index diff")
+        ax1[1].set(xlabel='index',ylabel='$distance (m)$',title="distance")
+        fig1.savefig(os.path.join("./plot", "exp{}_delta_p.png".format(dataset_name)))
+        
+    
 if __name__=='__main__' :
     #plot_dt_sc()
     #args = KITTIArgs()
     #dataset = KITTIDataset(args)
-    #plot_distance(args, dataset)
-    #args = USVArgs()
-    #dataset = USVDataset(args)
+    # plot_distance(args, dataset)
+    args = USVArgs()
+    dataset = USVDataset(args)
     #print(dataset.datasets)
     # name = "ekf_output"
     # off_dict_gps = {"sample" : [2,0,2], "ekf_output" : [13,10,13], "ekf_ext_" : [13,13,13], "ekf_ext_rev_" : [13,13,12]} 
@@ -407,6 +506,10 @@ if __name__=='__main__' :
     # folder_dict = {"sample" : ".", "ekf_output" : "output", "ekf_ext_" : "ext", "ekf_ext_rev_" : "rev"}
     # #[26201680711117849, 26201887724724675, 26202270859414101]
     # plot_timestamp(folder_dict[name], name,offset)
-    #plot_bias()
+    plot_bias2()
     
-    plot_vbody()
+    #plot_vbody()
+    
+    # args = USVArgs()
+    # dataset = USVDataset(args)
+    # plot_delta_p(args, dataset)

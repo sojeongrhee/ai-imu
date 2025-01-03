@@ -126,11 +126,13 @@ class INROLEKF :
         
     def init_covariance(self) : 
         P = np.zeros((self.P_dim, self.P_dim))
-        P[:3,:3] = 0.01*np.eye(3)    #self.cov_pos0
-        P[3:6,3:6] = 0.1*np.eye(3)   #self.cov_vel0
-        P[6:9,6:9] = 1.0*np.eye(3)   #self.cov_ori0
-        P[9:12,9:12] = 1.0*np.eye(3) #self.cov_b_acc0
-        P[12:15,12:15] = 1e-2*np.eye(3) #self.cov_b_gyr0
+        #scale_factor = 100/28
+        scale_factor = 1.4
+        P[:3,:3] = 0.01*np.eye(3) * scale_factor      #self.cov_pos0
+        P[3:6,3:6] = 0.1*np.eye(3) * scale_factor   #self.cov_vel0
+        P[6:9,6:9] = 1.0*np.eye(3) * scale_factor      #self.cov_ori0
+        P[9:12,9:12] = 1.0*np.eye(3) * scale_factor   #self.cov_b_acc0
+        P[12:15,12:15] = 1e-2*np.eye(3) * scale_factor #self.cov_b_gyr0
         return P        
         
     def update_measurement_queue(self, p, q, t, address):
@@ -185,7 +187,7 @@ class INROLEKF :
         self._state.velocity += acceleration * dt 
         self._state.orientation = Quaternion(matrix=R.dot(IEKF.so3exp(w_hat * dt)))
         
-        eta_a = self.cov_b_acc_decay
+        eta_a = self.cov_b_acc_decay * 3.3
         eta_w = self.cov_b_omega_decay
         self._state.bias_acc *= self.compute_decay(eta_a*dt)
         self._state.bias_gyr *= self.compute_decay(eta_w*dt)
@@ -271,8 +273,8 @@ class INROLEKF :
         R = self._state.orientation.rotation_matrix
         R_w = IEKF.so3exp(w_hat*dt)
         #print("dt ",dt)
-        eta_a = self.cov_b_acc_decay
-        eta_w = self.cov_b_omega_decay
+        eta_a = self.cov_b_acc_decay * 3.3
+        eta_w = self.cov_b_omega_decay 
         Fx = np.eye(15)
         Fx[0:3, 3:6] = I*dt
         Fx[0:3, 6:9] = -0.5*(R.dot(IEKF.skew(a_hat))) * dt * dt
@@ -300,19 +302,21 @@ class INROLEKF :
     
     def make_propagation_noise_covariance(self) : 
         I = np.eye(3)
-        n_v = self.cov_vel_dis
-        n_a = self.cov_acc
-        n_w = self.cov_omega
-        w_a = self.cov_b_acc
-        w_w = self.cov_b_omega
-        
+        scale_factor = 12
+        n_v = self.cov_vel_dis * scale_factor  # 속도 노이즈
+        n_a = self.cov_acc * scale_factor   # 가속도 노이즈
+        n_w = self.cov_omega * scale_factor   # 자이로 노이즈
+        w_a = self.cov_b_acc * scale_factor  # 가속도 바이어스 노이즈
+        w_w = self.cov_b_omega * scale_factor  # 자이로 바이어스 노이즈
+
         Q = np.zeros((15,15))
-        Q[0:3, 0:3] = I * n_v * n_v
-        Q[3:6, 3:6] = I * n_a * n_a
-        Q[6:9, 6:9] = I * n_w * n_w
-        Q[9:12, 9:12] = I * w_a * w_a
-        Q[12:15, 12:15] = I * w_w * w_w
+        Q[0:3, 0:3] = I * n_v * n_v  # 속도 노이즈 공분산
+        Q[3:6, 3:6] = I * n_a * n_a  # 가속도 노이즈 공분산
+        Q[6:9, 6:9] = I * n_w * n_w  # 자이로 노이즈 공분산
+        Q[9:12, 9:12] = I * w_a * w_a # 가속도 바이어스 노이즈 공분산
+        Q[12:15, 12:15] = I * w_w * w_w  # 자이로 바이어스 노이즈 공분산
         return Q
+
     
     # delta_x is np.array 15x1
     def update_innovation(self, delta_x) : 

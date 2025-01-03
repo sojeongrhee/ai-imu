@@ -14,7 +14,7 @@ from utils_numpy_filter import NUMPYIEKF as IEKF
 from utils import prepare_data, create_folder
 from utils_plot import results_filter
 from utils import umeyama_alignment
-from train_torch_filter import precompute_lost, prepare_loss_data
+from train_torch_filter import precompute_lost, prepare_loss_data, prepare_filter
 
 import copy
 import pickle
@@ -622,7 +622,7 @@ def plot_iekf_loss(args, dataset) :
         
         list_rpe = dataset.list_rpe[dataset_name]
         list_rpe[2] = list_rpe[2].to('cuda')
-        interval = 100
+        interval = 250
         loss_tmp = []
         for start_idx in tqdm(range(Ns[0], Ns[1]-seq_dim, interval)) :
             N0 = start_idx - Ns[0]
@@ -669,73 +669,109 @@ def plot_iekf_loss(args, dataset) :
         ax2.plot(loss_tmp[:,0], loss_tmp[:,2])
         ax2.plot(loss_tmp[:,0], loss_tmp[:,3])
         fig2.savefig(os.path.join(folder_path, "length_per_loss.png"))
-            
-def plot_iekf_result(args, dataset) : 
-    iekf = TORCHIEKF()
+
+def plot_iekf_result(args, dataset): 
+    iekf = prepare_filter(args, dataset)
+    iekf.eval()
     criterion = torch.nn.MSELoss(reduction="mean")
     iekf.filter_parameters = USVParameters()  
     iekf.set_param_attr()
     loss_res = []
     for i, (dataset_name, Ns) in enumerate(dataset.datasets_train_filter.items()):
-        #if dataset_name not in ["merged_output_final_2","merged_output_final_3"] : 
-        #    continue
-        if dataset_name not in ["merged_output_py_final_2"] : 
+        if dataset_name not in ["merged_output_py_fixed_bias_3", "merged_output_py_fixed_bias_2"]: 
             continue
         seq_dim = args.seq_dim
-        # get data with trainable instant
-        # t, ang_gt, p_gt, v_gt, u, N0 = prepare_data_filter(dataset, dataset_name, Ns,
-        #                                                         iekf, seq_dim)
-        t, ang_gt, p_gt, v_gt,  u = dataset.get_data(dataset_name)
+
+        t, ang_gt, p_gt, v_gt, u = dataset.get_data(dataset_name)
         t = t[Ns[0]: Ns[1]]
         ang_gt = ang_gt[Ns[0]: Ns[1]]
         p_gt = (p_gt[Ns[0]: Ns[1]] - p_gt[Ns[0]])
         v_gt = v_gt[Ns[0]: Ns[1]]
         u = u[Ns[0]: Ns[1]]
+        b_acc_gt = None
+        if args.add_extra:
+            u_bias = dataset.get_extra_data(dataset_name)
+            b_acc_gt = u_bias[Ns[0]: Ns[1], :3]
+
         prepare_loss_data(args, dataset)
         iekf.g = torch.Tensor(iekf.g).double().to('cuda')
-        
+
         list_rpe = dataset.list_rpe[dataset_name]
         list_rpe[2] = list_rpe[2].to('cuda')
-        interval = 2500
+
         loss_tmp = []
-        Ns_ = [41200, 43701]
-        for start_idx in range(Ns_[0]-Ns[0], Ns_[1]-Ns[0]-interval, interval) :
-            print("start", start_idx)
-            N0 = start_idx 
+        start_idx = 20000
+        interval = 250
+        Ns_ = [start_idx, start_idx + seq_dim + 1]
+
+        folder_path = os.path.join(args.path_results, dataset_name, 'trajectory')
+        create_folder(folder_path)
+
+        for start_idx in range(Ns_[0], Ns_[1] - interval, interval):
+            N0 = start_idx
             N = N0 + interval
             t_ = t[N0: N].double().to('cuda')
             ang_gt_ = ang_gt[N0: N].double().to('cuda')
             p_gt_ = (p_gt[N0: N] - p_gt[N0]).double().to('cuda')
             v_gt_ = v_gt[N0: N].double().to('cuda')
             u_ = u[N0: N].double().to('cuda')
-            # add noise
-            #u = dataset.add_noise(u)
+            b_acc_gt_ = b_acc_gt[N0: N].double().to('cuda')
             iekf.set_Q()
-            measurements_covs = torch.Tensor([[1e6, 1e3]]*len(u)).double().to('cuda')
+
+            measurements_covs = torch.Tensor([[2, 1]] * len(u)).double().to('cuda')
             Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i = iekf.run(t_, u_, measurements_covs,
-                                                        v_gt_, p_gt_, t_.shape[0],
-                                                        ang_gt_[0])
-            
-        
-            #print("t, ang_gt, p_gt, v_gt, u :", t, ang_gt, p_gt, v_gt, u )
-            # plot loss
-            folder_path = os.path.join(args.path_results, dataset_name, 'trajectory')
-            create_folder(folder_path)
+                                                                  v_gt_, p_gt_, t_.shape[0],
+                                                                  ang_gt_[0], b_acc_gt_[0])
+
+            delta_p, delta_p_gt, _, _ = precompute_lost(Rot, p, list_rpe, N0)
+
+            # 가속도와 속도를 적분하여 position을 구하는 부분 추가
+            dt = np.diff(t_.cpu().numpy(), axis=0)
+
+            # Velocity 적분하여 position 계산
+            p_from_v = np.zeros_like(v.detach().cpu().numpy())  # detach() 사용
+            for i in range(1, len(t_)):
+                p_from_v[i] = p_from_v[i-1] + v.detach().cpu().numpy()[i-1] * dt[i-1]
+
+            # v_gt 적분하여 position 계산
+            p_from_v_gt = np.zeros_like(v_gt_.cpu().numpy())
+            for i in range(1, len(t_)):
+                p_from_v_gt[i] = p_from_v_gt[i-1] + v_gt_.cpu().numpy()[i-1] * dt[i-1]
+
+            # Acceleration 이중적분하여 position 계산
+            dt_expanded = dt[:, np.newaxis]  # dt를 (249, 1) 형식으로 확장
+            acc = np.diff(v.detach().cpu().numpy(), axis=0) / dt_expanded
+            p_from_acc = np.zeros_like(acc)
+            v_from_acc = np.zeros_like(acc)
+            for i in range(1, len(acc)):
+                v_from_acc[i] = v_from_acc[i-1] + acc[i-1] * dt_expanded[i-1]
+                p_from_acc[i] = p_from_acc[i-1] + v_from_acc[i-1] * dt_expanded[i-1]
+
+            # plot loss와 함께 위치 plot
             fig1, ax1 = plt.subplots(figsize=(20, 10))
+            fig1.suptitle('Idx:{}_{}, Loss:{}'.format(N0, N, "None" if delta_p is None else criterion(delta_p, delta_p_gt).item()))
+
             p = p.detach().cpu().numpy()
             p_gt_ = p_gt_.detach().cpu().numpy()
-            #ax1.plot(p[:, 0], p[:, 1], 'b1', label='iekf')
-            yaw = np.array([(iekf.to_rpy(R.detach())[2]).cpu() for R in Rot])
-            x_dir = np.cos(yaw)
-            y_dir = np.sin(yaw)
-            ax1.quiver(p[:, 0], p[:, 1],x_dir, y_dir, color='b')
 
-            print("p_gt_ : ",p_gt_.shape)
-            #ax1.plot(p_gt_[:, 0], p_gt_[:, 1], 'rx', label='gt')
-            x_dir_gt = np.cos(ang_gt[N0:N,2])
-            y_dir_gt = np.sin(ang_gt[N0:N,2])
-            ax1.quiver(p_gt_[:, 0], p_gt_[:, 1], x_dir_gt, y_dir_gt, color='r')
-            fig1.savefig(os.path.join(folder_path, "{}_{}.png".format(N0,N)))
+            ax1.quiver(p[:, 0], p[:, 1], np.cos(np.array([(iekf.to_rpy(R.detach())[2]).cpu() for R in Rot])),
+                       np.sin(np.array([(iekf.to_rpy(R.detach())[2]).cpu() for R in Rot])), color='b')
+
+            # Ground truth plot
+            ax1.quiver(p_gt_[:, 0], p_gt_[:, 1], np.cos(ang_gt[N0:N, 2]), np.sin(ang_gt[N0:N, 2]), color='r')
+
+            # Velocity 적분한 Position plot
+            ax1.plot(p_from_v[:, 0], p_from_v[:, 1], 'g--', label="Integrated from velocity")
+
+            # v_gt 적분한 Position plot
+            ax1.plot(p_from_v_gt[:, 0], p_from_v_gt[:, 1], 'c--', label="Integrated from v_gt")
+
+            # Acceleration 이중적분한 Position plot
+            ax1.plot(p_from_acc[:, 0], p_from_acc[:, 1], 'm--', label="Integrated from acceleration")
+
+            ax1.legend(['Prediction', 'Ground truth', 'Integrated from velocity', 'Integrated from v_gt', 'Integrated from acceleration'])
+            fig1.savefig(os.path.join(folder_path, "{}_{}.png".format(N0, N)))
+
 
 if __name__ == "__main__" : 
     #torch.set_default_device('cuda') 

@@ -148,11 +148,12 @@ class NUMPYIEKF:
     def init_covariance(self):
         P = np.zeros((self.P_dim, self.P_dim))
         P[:2, :2] = self.cov_Rot0*self.Id2  # no yaw error
-        P[3:5, 3:5] = self.cov_v0*self.Id2
-        P[9:12, 9:12] = self.cov_b_omega0*self.Id3
-        P[12:15, 12:15] = self.cov_b_acc0*self.Id3
+        P[3:5, 3:5] = self.cov_v0*self.Id2 
+        P[9:12, 9:12] = self.cov_b_omega0*self.Id3 
+        P[12:15, 12:15] = self.cov_b_acc0*self.Id3 
         P[15:18, 15:18] = self.cov_Rot_c_i0*self.Id3
         P[18:21, 18:21] = self.cov_t_c_i0*self.Id3
+        
         return P
 
     def init_saved_state(self, dt, N, ang0):
@@ -204,11 +205,13 @@ class NUMPYIEKF:
 
         F = F * dt
         G = G * dt
+
         F_square = F.dot(F)
         F_cube = F_square.dot(F)
         Phi = self.IdP + F + 1/2*F_square + 1/6*F_cube
         P = Phi.dot(P_prev + G.dot(self.Q).dot(G.T)).dot(Phi.T)
         return P
+
 
     def update(self, Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i, P, u, i, measurement_cov):
         # orientation of body frame

@@ -25,7 +25,7 @@ output : ekf csv file
 """
 
 class ekf_msg : 
-    def __init__(self, time, seq, pos, vel, ori) : 
+    def __init__(self, time, seq, pos, vel, ori, b_acc = None, b_gyr = None) : 
         self.time = int(time)
         self.seq = int(seq)
         self.pos_x = pos[0]
@@ -37,6 +37,20 @@ class ekf_msg :
         self.ori_r = ori[0]
         self.ori_p = ori[1]
         self.ori_y = ori[2]
+        self.b_acc_x = 0
+        self.b_acc_y = 0 
+        self.b_acc_z = 0
+        self.b_gyr_x = 0
+        self.b_gyr_y = 0
+        self.b_gyr_z = 0
+        if b_acc is not None : 
+            self.b_acc_x = b_acc[0]
+            self.b_acc_y = b_acc[1]
+            self.b_acc_z = b_acc[2]
+        if b_gyr is not None :
+            self.b_gyr_x = b_gyr[0]
+            self.b_gyr_y = b_gyr[1]
+            self.b_gyr_z = b_gyr[2]
 
 class EKFrunner :
     
@@ -76,6 +90,7 @@ class EKFrunner :
             
             ekf.updateIMU(a, w, dt)
             R = ekf._state.orientation.rotation_matrix
+            #R = ekf._state.orientation.as_matrix()
             ori = IEKF.to_rpy(R)
             # time same as imu input
             output = ekf_msg(
@@ -83,7 +98,9 @@ class EKFrunner :
                seq = seq,
                pos = ekf._state.position,
                vel = ekf._state.velocity,
-               ori = ori
+               ori = ori,
+               b_acc = ekf._state.bias_acc,
+               b_gyr = ekf._state.bias_gyr
             )
 
             data_prev = self.imu_stack[stack_size-1]
@@ -126,7 +143,9 @@ class EKFrunner :
                 seq = seq,
                 pos = ekf._state.position,
                 vel = ekf._state.velocity,
-                ori = ori
+                ori = ori,
+                b_acc = ekf._state.bias_acc,
+                b_gyr = ekf._state.bias_gyr
             )
             # only output on gps base    
             if addr == "smc_2000" : 
@@ -137,7 +156,7 @@ class EKFrunner :
 def main() : 
     data_path = "../dataset/sheco_data"
     
-    for exp_num in range(1,4) : 
+    for exp_num in range(3,4) : 
         print("exp num : ",exp_num)
         imu_name = "imu{}.bag".format(exp_num)
         gps_name = "gt{}.bag".format(exp_num)
@@ -161,8 +180,10 @@ def main() :
         runner = EKFrunner(df_imu.columns, df_gps.columns)
         # 41 47
         #print(len(df_imu.columns), len(df_gps.columns)) 
+        # df_ekf = pd.DataFrame(columns = ['%time','field.seq','field.pos_x','field.pos_y','field.pos_z',\
+        #     'field.vel_x','field.vel_y','field.vel_z','field.ori_r','field.ori_p','field.ori_y'])
         df_ekf = pd.DataFrame(columns = ['%time','field.seq','field.pos_x','field.pos_y','field.pos_z',\
-            'field.vel_x','field.vel_y','field.vel_z','field.ori_r','field.ori_p','field.ori_y'])
+            'field.vel_x','field.vel_y','field.vel_z','field.ori_r','field.ori_p','field.ori_y', 'field.b_acc_x','field.b_acc_y','field.b_acc_z','field.b_gyr_x','field.b_gyr_y','field.b_gyr_z'])
         imu_flag = True #get new imu row
         gps_flag = True #get new gps row
         while True:
@@ -210,7 +231,7 @@ def main() :
 
         # save
         df_ekf = df_ekf.astype({'%time':np.uint64,'field.seq': np.uint64})
-        df_ekf.to_csv(os.path.join(data_path, 'ekf_py_{}.csv'.format(exp_num)), index=False)
+        df_ekf.to_csv(os.path.join(data_path, 'ekf_py_fixed_bias_{}.csv'.format(exp_num)), index=False)
             
             
 if __name__ == "__main__" :

@@ -8,6 +8,7 @@ from utils_numpy_filter import NUMPYIEKF
 from utils import prepare_data
 from scipy.linalg import cho_factor, cho_solve
 torch.set_default_tensor_type('torch.cuda.DoubleTensor')
+torch.set_printoptions(precision=10)
 class InitProcessCovNet(torch.nn.Module):
 
         def __init__(self):
@@ -142,18 +143,18 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
                             u[i], i, measurements_covs[i])
             # print("Rot : ", Rot_i)
             # print("Rot_u : ", Rot[i])
-            # print("v : ", v_i)
-            # print("v_u : ", v[i])
-            # print("v_gt :", v_mes[i])
+            print("v : ", v_i)
+            print("v_u : ", v[i])
+            print("v_gt :", v_mes[i])
             # print("p : ", p_i)
             # print("p_u : ", p[i])
             # print("p_gt : ",p_mes[i])
-            # print("b_omega : ",b_omega_i)
-            # print("b_omega_u : ",b_omega[i])
-            # print("b_acc : ", b_acc_i)
-            # print("b_acc_u : ", b_acc[i])
-            # print("Rot_c_i : ",Rot_c_i_i)
-            # print("Rot_c_i_u : ",Rot_c_i[i])
+            print("b_omega : ",b_omega_i)
+            print("b_omega_u : ",b_omega[i])
+            print("b_acc : ", b_acc_i)
+            print("b_acc_u : ", b_acc[i])
+            #print("Rot_c_i : ",Rot_c_i_i)
+            #print("Rot_c_i_u : ",Rot_c_i[i])
             # print("t_c_i : ",t_c_i_i)
             # print("t_c_i_u : ",t_c_i[i])
         return Rot, v, p, b_omega, b_acc, Rot_c_i, t_c_i
@@ -197,10 +198,11 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
     def propagate(self, Rot_prev, v_prev, p_prev, b_omega_prev, b_acc_prev, Rot_c_i_prev, t_c_i_prev,
                   P_prev, u, dt):
         Rot_prev = Rot_prev.clone()
+        #print(u[3:6])
         acc_b = u[3:6] - b_acc_prev
         #print("acc_b : ", acc_b)
         acc = Rot_prev.mv(acc_b) - self.g
-        #print("acc : ", acc)
+        print("acc : ", acc)
         v = v_prev + acc * dt
         p = p_prev + v_prev.clone() * dt + 1/2 * acc * dt**2
 
@@ -257,7 +259,7 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         # velocity in body frame
         #v_body = Rot_c_i.t().mv(v_imu) + self.skew(t_c_i).mv(omega)
         v_body = Rot_c_i.t().mv(v_imu + Omega.mv(t_c_i))
-        #print("v_body : ", v_body)
+        print("v_body : ", v_body)
         # Jacobian in car frame
         H_v_imu = self.skew(v_imu + Omega.mv(t_c_i))
         # H_t_c_i = self.skew(t_c_i)
@@ -496,6 +498,7 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         Update the process noise covariance
         :return:
         """
+        scale_Q = 12
 
         self.Q = torch.diag(torch.Tensor([self.cov_omega, self.cov_omega, self. cov_omega,
                                            self.cov_acc, self.cov_acc, self.cov_acc,
@@ -513,6 +516,7 @@ class TORCHIEKF(torch.nn.Module, NUMPYIEKF):
         self.Q[9:12, 9:12] = self.cov_b_acc*beta[3]*self.Id3
         self.Q[12:15, 12:15] = self.cov_Rot_c_i*beta[4]*self.Id3
         self.Q[15:18, 15:18] = self.cov_t_c_i*beta[5]*self.Id3
+        
 
     def load(self, args, dataset):
         path_iekf = os.path.join(args.path_temp, "iekfnets.p")
